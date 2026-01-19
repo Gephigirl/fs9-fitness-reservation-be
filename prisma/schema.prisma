@@ -51,7 +51,6 @@ model User {
 
   pointBalance Int @default(0) @map("point_balance") // 보유 포인트(잔액)
 
-  // 판매자일 때만 센터
   center Center?
 
   reservations  Reservation[] // 예약 내역
@@ -178,7 +177,7 @@ model Reservation {
 
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
-  completedAt DateTime? @map("completed_at")
+  completedAt DateTime? @map("completed_at") // 수강 완료 시각
 
   // 같은 슬롯에 같은 유저 중복 예약 방지
   @@unique([slotId, userId])
@@ -281,7 +280,7 @@ model Notification {
 
   title   String // 알림 제목
   body    String? // 알림 내용
-  linkUrl String? @map("link_url") // 이동 링크? 
+  linkUrl String? @map("link_url") // 이동 링크 
 
   createdAt DateTime @default(now()) @map("created_at")
 
