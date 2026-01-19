@@ -1,0 +1,276 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CUSTOMER // 고객
+  SELLER   // 판매자
+  ADMIN    // 관리자
+}
+
+enum ClassStatus {
+  PENDING   // 승인 대기
+  APPROVED  // 승인 완료
+  REJECTED  // 반려
+}
+
+enum ReservationStatus {
+  BOOKED     // 예약됨
+  CANCELED   // 취소/거절 처리됨
+  COMPLETED  // 수강 완료
+}
+
+enum PointUsed {
+  CHARGE // 충전
+  USE    // 사용
+  REFUND // 환불
+  ADMIN  // 관리자 지급/회수
+}
+
+model User {
+  id              String   @id @default(cuid())                 // 유저 PK
+  email           String   @unique                              // 로그인 이메일(중복 불가)
+  passwordHash    String                                        // 비밀번호 해시
+  nickname        String                                        // 닉네임
+  phone           String   @unique                              // 연락처(중복 불가)
+  role            UserRole @default(CUSTOMER)                   // CUSTOMER/SELLER/ADMIN
+
+  profileImageUrl String?                                       // 프로필 이미지
+  introduction    String?                                       // 자기소개
+
+  pointBalance    Int      @default(0)                          // 보유 포인트(잔액)
+
+  // 판매자일 때만 센터가 생김(스키마로 role=SELLER 강제는 못 함 → 앱 로직에서 보장)
+  center          Center?
+
+  reservations    Reservation[]                                 // 예약 내역
+  reviews         Review[]                                      // 리뷰
+  userCoupons     UserCoupon[]                                  // 쿠폰함
+  notifications   Notification[]                                // 알림
+  pointHistory    PointHistory[]                                // 포인트 내역
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Center {
+  id            String   @id @default(cuid())                   // 센터 PK
+
+  ownerId       String   @unique                                // 센터 소유자(판매자) 유저ID (1:1)
+  owner         User     @relation(fields: [ownerId], references: [id])
+
+  name          String                                          // 센터명
+  address1      String                                          // 도로명 주소
+  address2      String?                                         // 상세 주소
+  introduction  String?                                         // 센터 소개
+
+  businessHours Json?                                           // 영업시간(주간 스케줄 반영)
+  lat           Float?                                          // 위도(지도 마커)
+  lng           Float?                                          // 경도(지도 마커)
+
+  classes       Class[]                                         // 센터 소속 클래스
+  coupons       CouponTemplate[]                                // 센터 전용 쿠폰 템플릿
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Class {
+  id            String      @id @default(cuid())                // 클래스 PK
+
+  centerId      String                                          // 소속 센터
+  center        Center      @relation(fields: [centerId], references: [id])
+
+  title         String                                          // 클래스명
+  category      String                                          // 종목(헬스/요가/필라테스 등)
+  level         String                                          // 난이도(입문/초급/중급/고급 등)
+
+  description   String?                                         // 상세 설명
+  notice        String?                                         // 공지/주의사항
+
+  pricePoints   Int                                             // 가격(포인트)
+  capacity      Int                                             // 정원
+
+  bannerUrl     String?                                         // 배너 이미지
+  imageUrls     String[]                                        // 소개 이미지들(필요시)
+
+  status        ClassStatus  @default(PENDING)                  // 승인 상태
+  rejectReason  String?                                         // 반려 사유
+
+  slots         ClassSlot[]                                     // 시간 슬롯들
+  reservations  Reservation[]                                   // 예약들
+  reviews       Review[]                                        // 리뷰들
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([centerId])
+  @@index([status])
+}
+
+model ClassSlot {
+  id            String    @id @default(cuid())                  // 슬롯 PK
+
+  classId       String                                          // 소속 클래스
+  class         Class     @relation(fields: [classId], references: [id])
+
+  startAt       DateTime                                        // 시작 시간
+  endAt         DateTime                                        // 종료 시간
+
+  capacity      Int                                             // 슬롯 정원
+  isOpen        Boolean   @default(true)                         // 예약 가능 여부
+
+  reservations  Reservation[]                                   // 이 슬롯 예약들
+
+  createdAt     DateTime @default(now())
+
+  @@unique([classId, startAt])
+  @@index([startAt])
+}
+
+model Reservation {
+  id                  String            @id @default(cuid())     // 예약 PK
+
+  userId              String                                      // 예약 유저
+  user                User              @relation(fields: [userId], references: [id])
+
+  classId             String                                      // 예약 클래스(조회용)
+  class               Class             @relation(fields: [classId], references: [id])
+
+  slotId              String                                      // 예약 슬롯
+  slot                ClassSlot          @relation(fields: [slotId], references: [id])
+
+  status              ReservationStatus  @default(BOOKED)         // BOOKED/CANCELED/COMPLETED
+
+  slotStartAt          DateTime                                    // startAt 복사(유저 시간대 중복예약 방지용)
+
+  pricePoints          Int                                        // 원가(예약 시점 스냅샷)
+  couponDiscountPoints Int             @default(0)                // 쿠폰 할인 포인트
+  paidPoints           Int             @default(0)                // 실제 차감 포인트
+
+  userCouponId         String?          @unique                   // 사용 쿠폰(1회 사용 보장)
+  userCoupon           UserCoupon?      @relation(fields: [userCouponId], references: [id])
+
+  review               Review?                                     // 포인트 내역
+
+  canceledAt           DateTime?                                   // 취소/거절 처리 시각
+  canceledBy           String?                                     // 취소 주체(유저/판매자/관리자)
+  cancelNote           String?                                     // 취소/거절 사유
+  adminMemo            String?                                     // 관리자 메모
+
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  completedAt          DateTime?
+
+  // 같은 슬롯에 같은 유저 중복 예약 방지
+  @@unique([slotId, userId])
+  // 같은 시간대(=slotStartAt) 유저 중복 예약 방지
+  @@unique([userId, slotStartAt])
+
+  @@index([userId, createdAt])
+  @@index([classId, createdAt])
+}
+
+model PointHistory {
+  id          String    @id @default(cuid())                     // 포인트 내역 PK
+
+  userId      String                                              // 대상 유저
+  user        User      @relation(fields: [userId], references: [id])
+
+  type        PointUsed                                           // CHARGE/USE/REFUND/ADMIN
+  amount      Int                                                 // 변동량(+/-)
+
+  reservationId String?                                           // 차감/환불이 걸린 예약(선택)
+
+  orderId      String?                                            // 토스 주문ID(선택)
+  paymentKey   String?   @unique                                  // 토스 결제키(중복 반영 방지)
+
+  memo        String?                                             // 이벤트 지급/관리자 조정 사유 등
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+}
+
+model CouponTemplate {
+  id             String   @id @default(cuid())                   // 쿠폰 종류 PK
+
+  centerId        String?                                         // null=전체 적용(관리자), 값=센터 전용(판매자)
+  center          Center?  @relation(fields: [centerId], references: [id])
+
+  name           String                                           // 쿠폰 이름
+  discountPoints Int                                              // 할인 포인트
+  expiresAt      DateTime?                                        // 만료일(선택)
+
+  createdAt      DateTime @default(now())
+
+  userCoupons    UserCoupon[]                                     // 이 템플릿으로 발급된 유저 쿠폰들
+
+  @@index([centerId])
+}
+
+model UserCoupon {
+  id          String   @id @default(cuid())                       // 유저 쿠폰 PK(쿠폰함 아이템)
+
+  userId      String                                              // 쿠폰 소유자
+  user        User     @relation(fields: [userId], references: [id])
+
+  templateId  String                                              // 어떤 쿠폰 템플릿인지
+  template    CouponTemplate @relation(fields: [templateId], references: [id])
+
+  issuedAt    DateTime @default(now())                             // 발급일
+  usedAt      DateTime?                                            // 사용일(미사용 null)
+
+  reservation Reservation?                                         // (optional back-relation)
+  
+  @@index([userId, usedAt])
+  @@index([templateId])
+}
+
+model Review {
+  id             String   @id @default(cuid())                    // 리뷰 PK
+
+  reservationId  String   @unique                                 // 예약 1건당 리뷰 1개
+  reservation    Reservation @relation(fields: [reservationId], references: [id])
+
+  userId         String                                           // 작성자
+  user           User     @relation(fields: [userId], references: [id])
+
+  classId        String                                           // 대상 클래스
+  class          Class    @relation(fields: [classId], references: [id])
+
+  rating         Int                                              // 별점
+  content        String?                                          // 리뷰 내용
+  imageUrls      String[]                                         // 리뷰 이미지들
+
+  createdAt      DateTime @default(now())
+
+  @@index([classId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())                         // 알림 PK
+
+  userId    String                                                // 대상 유저
+  user      User     @relation(fields: [userId], references: [id])
+
+  title     String                                                // 알림 제목
+  body      String?                                               // 알림 내용
+  linkUrl   String?                                               // 이동 링크(선택)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
