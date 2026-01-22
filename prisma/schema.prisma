@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -132,6 +126,7 @@ model ClassSlot {
   endAt   DateTime @map("end_at") // 종료 시간
 
   capacity Int // 슬롯 정원
+  currentReservation Int @default(0) @map("current_reservation") // 동시성 제어용
   isOpen   Boolean @default(true) @map("is_open") // 예약 가능 여부
 
   reservations Reservation[] // 이 슬롯 예약들
@@ -159,7 +154,7 @@ model Reservation {
 
   slotStartAt DateTime @map("slot_start_at") // startAt 복사(유저 시간대 중복예약 방지용)
 
-  pricePoints          Int @map("price_points") // 원가(예약 시점 스냅샷)
+  pricePoints          Int @map("price_points") // 정가
   couponDiscountPoints Int @default(0) @map("coupon_discount_points") // 쿠폰 할인 포인트
   paidPoints           Int @default(0) @map("paid_points") // 실제 차감 포인트
 
@@ -170,7 +165,7 @@ model Reservation {
   pointHistories PointHistory[] // 포인트 내역들
 
   canceledAt DateTime? @map("canceled_at") // 취소/거절 처리 시각
-  canceledBy String?   @map("canceled_by") // 취소 주체(유저/판매자/관리자)
+  canceledBy UserRole?   @map("canceled_by") // 취소 주체(유저/판매자/관리자)
   cancelNote String?   @map("cancel_note") // 취소/거절 사유
   adminMemo  String?   @map("admin_memo") // 관리자 메모
 
@@ -195,6 +190,8 @@ model PointHistory {
 
   type   PointUsed // CHARGE/USE/REFUND/ADMIN
   amount Int // 변동량
+  balanceBefore Int @map("balance_before") // 변동 전 잔액
+  balanceAfter  Int @map("balance_after")  // 변동 후 잔액
 
   reservationId String?      @map("reservation_id") // 차감/환불이 걸린 예약
   reservation   Reservation? @relation(fields: [reservationId], references: [id])
