@@ -268,3 +268,39 @@ export async function deleteSlot(slotId: string) {
     where: { id: slotId },
   });
 }
+
+// 클래스의 모든 예약 취소
+export async function cancelAllReservationsForClass(classId: string) {
+  return prisma.reservation.updateMany({
+    where: {
+      slot: {
+        classId,
+      },
+      status: 'BOOKED',
+    },
+    data: {
+      status: 'CANCELED',
+    },
+  });
+}
+
+// 슬롯의 모든 예약 취소
+export async function cancelAllReservationsForSlot(slotId: string) {
+  return prisma.reservation.updateMany({
+    where: {
+      slotId,
+      status: 'BOOKED',
+    },
+    data: {
+      status: 'CANCELED',
+    },
+  });
+}
+
+// 클래스의 모든 슬롯 정원 업데이트
+export async function updateAllSlotsCapacity(classId: string, capacity: number) {
+  return prisma.classSlot.updateMany({
+    where: { classId },
+    data: { capacity },
+  });
+}

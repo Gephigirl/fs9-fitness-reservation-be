@@ -28,12 +28,12 @@ export const updateClassSchema = z.object({
 // 클래스 목록 조회 필터 
 export const queryClassSchema = z.object({
   query: z.object({
-    category: z.string().exactOptional(),
-    level: z.enum(CLASS_LEVELS).exactOptional(),
-    status: z.enum(Object.values(ClassStatus) as [string, ...string[]]).exactOptional(),
-    centerId: z.string().min(1, '올바른 센터 ID가 아닙니다').exactOptional(),
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(10),
+    category: z.string().optional(),
+    level: z.enum(CLASS_LEVELS).optional(),
+    status: z.enum(Object.values(ClassStatus) as [string, ...string[]]).optional(),
+    centerId: z.string().min(1, '올바른 센터 ID가 아닙니다').optional(),
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(10),
   }),
 });
 
@@ -62,10 +62,7 @@ export const createSlotSchema = z.object({
 // 슬롯 수정 
 export const updateSlotSchema = z.object({
   body: z.object({
-    capacity: z.number().int('정원은 정수여야 합니다').min(1, '정원은 1명 이상이어야 합니다').max(100, '정원은 100명 이하여야 합니다').exactOptional(),
-    isOpen: z.boolean().exactOptional(),
-  }).refine((data) => Object.keys(data).length > 0, {
-    message: '최소 하나 이상의 필드가 필요합니다',
+    isOpen: z.boolean(),
   }),
 });
 

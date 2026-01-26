@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import classRouter from './modules/class/class.routes.js';
 
 const app = express();
 
@@ -15,9 +16,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 라우터는 여기에 추가
-// app.use('/api/auth', authRouter);
-// app.use('/api/users', userRouter);
-// ...
+// 라우터
+app.use('/api/classes', classRouter);
+
 
 export default app;

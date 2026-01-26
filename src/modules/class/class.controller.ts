@@ -23,7 +23,19 @@ export async function createClassHandler(req: Request, res: Response, next: Next
 
 export async function getClassesHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const result = await classService.getClasses(req.query as any);
+    const authReq = req as AuthRequest;
+    const userRole = authReq.user?.role;
+    
+    const query = {
+      category: req.query.category as string | undefined,
+      level: req.query.level as any,
+      status: req.query.status as any,
+      centerId: req.query.centerId as string | undefined,
+      page: req.query.page ? Number(req.query.page) : 1,
+      limit: req.query.limit ? Number(req.query.limit) : 10,
+    };
+    
+    const result = await classService.getClasses(query, userRole);
 
     res.status(200).json({
       success: true,
@@ -38,6 +50,8 @@ export async function getClassesHandler(req: Request, res: Response, next: NextF
      
 export async function getClassByIdHandler(req: Request, res: Response, next: NextFunction) {
   try {
+    const authReq = req as AuthRequest;
+    const userRole = authReq.user?.role;
     const { id } = req.params;
     if (!id || typeof id !== 'string') {
       return res.status(400).json({
@@ -45,7 +59,7 @@ export async function getClassByIdHandler(req: Request, res: Response, next: Nex
         error: { message: '클래스 ID가 필요합니다' },
       });
     }
-    const classData = await classService.getClassById(id);
+    const classData = await classService.getClassById(id, userRole);
 
     res.status(200).json({
       success: true,

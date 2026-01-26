@@ -1,4 +1,4 @@
-import { ClassStatus } from '@prisma/client';
+import { ClassStatus, UserRole } from '@prisma/client';
 import type {
   CreateClassInput,
   UpdateClassInput,
@@ -38,14 +38,19 @@ export async function createClass(userId: string, data: CreateClassInput) {
 
 // 클래스 목록 조회
 
-export async function getClasses(query: QueryClassInput): Promise<PaginationResponse<Awaited<ReturnType<typeof classRepository.findManyClasses>>[0]>> {
+export async function getClasses(query: QueryClassInput, userRole?: UserRole): Promise<PaginationResponse<Awaited<ReturnType<typeof classRepository.findManyClasses>>[0]>> {
   const { category, level, status, centerId, page = 1, limit = 10 } = query;
 
   const where: any = {};
   if (category) where.category = category;
   if (level) where.level = level;
-  if (status) where.status = status;
   if (centerId) where.centerId = centerId;
+  
+  if (userRole === UserRole.CUSTOMER) { // customer는 승인된 클래스만 볼 수 있음
+    where.status = ClassStatus.APPROVED;
+  } else {
+    if (status) where.status = status;
+  }
 
   const skip = (page - 1) * limit;
 
@@ -65,10 +70,14 @@ export async function getClasses(query: QueryClassInput): Promise<PaginationResp
 
 // 클래스 상세 조회
 
-export async function getClassById(classId: string) {
+export async function getClassById(classId: string, userRole?: UserRole) {
   const classData = await classRepository.findClassById(classId, new Date());
 
   if (!classData) {
+    throw new Error('클래스를 찾을 수 없습니다');
+  }
+
+  if (userRole === UserRole.CUSTOMER && classData.status === ClassStatus.REJECTED) {
     throw new Error('클래스를 찾을 수 없습니다');
   }
 
@@ -88,9 +97,8 @@ export async function updateClass(userId: string, classId: string, data: UpdateC
     throw new Error('클래스 수정 권한이 없습니다');
   }
 
-  if (existingClass.status !== ClassStatus.PENDING) {
-    throw new Error('승인 대기 중인 클래스만 수정할 수 있습니다');
-  }
+  // 클래스 수정 시 모든 예약 취소
+  await classRepository.cancelAllReservationsForClass(classId);
 
   const updateData = {
     title: data.title !== undefined ? data.title : existingClass.title,
@@ -104,6 +112,11 @@ export async function updateClass(userId: string, classId: string, data: UpdateC
     imgUrls: data.imgUrls !== undefined ? data.imgUrls : existingClass.imgUrls,
   };
 
+  // 클래스 정원이 변경되면 모든 슬롯 정원도 업데이트
+  if (data.capacity !== undefined && data.capacity !== existingClass.capacity) {
+    await classRepository.updateAllSlotsCapacity(classId, data.capacity);
+  }
+
   const updatedClass = await classRepository.updateClass(classId, updateData);
 
   return updatedClass;
@@ -112,7 +125,7 @@ export async function updateClass(userId: string, classId: string, data: UpdateC
 // 클래스 삭제
 
 export async function deleteClass(userId: string, classId: string) {
-  const existingClass = await classRepository.findClassWithReservationCount(classId);
+  const existingClass = await classRepository.findClassWithCenter(classId);
 
   if (!existingClass) {
     throw new Error('클래스를 찾을 수 없습니다');
@@ -122,10 +135,7 @@ export async function deleteClass(userId: string, classId: string) {
     throw new Error('클래스 삭제 권한이 없습니다');
   }
 
-  if (existingClass._count.reservations > 0) {
-    throw new Error('예약이 있는 클래스는 삭제할 수 없습니다');
-  }
-
+  await classRepository.cancelAllReservationsForClass(classId);
   await classRepository.deleteClass(classId);
 
   return { message: '클래스가 삭제되었습니다' };
@@ -227,17 +237,6 @@ export async function updateSlot(userId: string, slotId: string, data: UpdateSlo
     throw new Error('슬롯 수정 권한이 없습니다');
   }
 
-  if (data.capacity !== undefined) {
-    const currentReservations = slot._count.reservations;
-    if (data.capacity < currentReservations) {
-      throw new Error(`현재 예약이 ${currentReservations}건 있어 정원을 ${data.capacity}명으로 줄일 수 없습니다`);
-    }
-
-    if (data.capacity > slot.class.capacity) {
-      throw new Error(`슬롯 정원은 클래스 정원(${slot.class.capacity}명) 이하여야 합니다`);
-    }
-  }
-
   const updatedSlot = await classRepository.updateSlot(slotId, data);
 
   return updatedSlot;
@@ -246,7 +245,7 @@ export async function updateSlot(userId: string, slotId: string, data: UpdateSlo
 // 슬롯 삭제
 
 export async function deleteSlot(userId: string, slotId: string) {
-  const slot = await classRepository.findSlotForDelete(slotId);
+  const slot = await classRepository.findSlotWithClassAndReservations(slotId);
 
   if (!slot) {
     throw new Error('슬롯을 찾을 수 없습니다');
@@ -256,9 +255,8 @@ export async function deleteSlot(userId: string, slotId: string) {
     throw new Error('슬롯 삭제 권한이 없습니다');
   }
 
-  if (slot._count.reservations > 0) {
-    throw new Error('예약이 있는 슬롯은 삭제할 수 없습니다');
-  }
+  // 슬롯 삭제 시 모든 예약 취소
+  await classRepository.cancelAllReservationsForSlot(slotId);
 
   await classRepository.deleteSlot(slotId);
 
