@@ -1,0 +1,94 @@
+### 변수 설정
+@baseUrl = http://localhost:4000/api
+
+### 시딩 후 로그 보고 복붙
+@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNta3V1MXZ4OTAwMDJ3bzh0eG54cWxtM2ciLCJlbWFpbCI6ImN1c3RvbWVyQHRlc3QuY29tIiwicm9sZSI6IkNVU1RPTUVSIiwiaWF0IjoxNzY5NDExNzE4LCJleHAiOjE3NzAwMTY1MTh9.L-X-LbTRnjvMv9whhjDQgL3is75OgHQa6WMdTa_c1Ss
+@sellerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNta3V1MXZ3ZTAwMDB3bzh0cjM1czIzMXQiLCJlbWFpbCI6InNlbGxlckB0ZXN0LmNvbSIsInJvbGUiOiJTRUxMRVIiLCJpYXQiOjE3Njk0MTE3MTgsImV4cCI6MTc3MDAxNjUxOH0.0fgB3X6LDabe_3eGs6hjezDAAEFQK_T6vtJ4O5wVPyQ
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNta3V1MXZ3eDAwMDF3bzh0ZWFlMTgzbWkiLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzY5NDExNzE4LCJleHAiOjE3NzAwMTY1MTh9.h-SA3bRWmjrFbHx8D66UUKfDUpS73iJaj84rARcGT4A
+
+@classId = cmkuuvjtc0003qc8t714sqnru
+@slotId = cmkuuv1ho0002qc8tl6wfkuyz
+
+### 1. 클래스 생성 (판매자)
+POST {{baseUrl}}/classes
+Content-Type: application/json
+Authorization: Bearer {{sellerToken}}
+
+{
+  "title": "테스트 요가 클래스",
+  "category": "요가",
+  "level": "초급",
+  "description": "요가 초급 클래스입니다",
+  "notice": "수업 10분 전 도착 부탁드립니다",
+  "pricePoints": 10000,
+  "capacity": 20,
+  "bannerUrl": "https://example.com/banner.jpg",
+  "imgUrls": ["https://example.com/img1.jpg"]
+}
+
+### 2. 클래스 목록 조회
+GET {{baseUrl}}/classes
+
+### 3. 클래스 목록 조회 (필터링)
+GET {{baseUrl}}/classes?category=요가&level=초급&page=1&limit=10
+
+### 4. 클래스 상세 조회
+GET {{baseUrl}}/classes/{{classId}}
+
+### 5. 클래스 수정 (판매자)
+PATCH {{baseUrl}}/classes/{{classId}}
+Content-Type: application/json
+Authorization: Bearer {{sellerToken}}
+
+{
+  "title": "수정된 요가 클래스",
+  "description": "설명이 수정되었습니다",
+  "capacity": 25,
+  "pricePoints": 12000
+}
+
+### 6. 클래스 승인 (관리자)
+# 승인해야 슬롯 생성 가능
+PATCH {{baseUrl}}/classes/{{classId}}/approve
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{}
+
+### 7. 클래스 반려 (관리자)
+PATCH {{baseUrl}}/classes/{{classId}}/reject
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "rejectReason": "클래스 정보가 부족합니다"
+}
+
+### 8. 슬롯 생성 (판매자)
+POST {{baseUrl}}/classes/{{classId}}/slots
+Content-Type: application/json
+Authorization: Bearer {{sellerToken}}
+
+{
+  "date": "2026-01-28",
+  "hour": 12,
+  "capacity": 25,
+  "isOpen": true
+}
+
+### 9. 슬롯 수정 (판매자)
+PATCH {{baseUrl}}/classes/{{classId}}/slots/{{slotId}}
+Content-Type: application/json
+Authorization: Bearer {{sellerToken}}
+
+{
+  "isOpen": false
+}
+
+### 10. 슬롯 삭제 (판매자)
+DELETE {{baseUrl}}/classes/{{classId}}/slots/{{slotId}}
+Authorization: Bearer {{sellerToken}}
+
+### 11. 클래스 삭제 (판매자)
+DELETE {{baseUrl}}/classes/{{classId}}
+Authorization: Bearer {{sellerToken}}

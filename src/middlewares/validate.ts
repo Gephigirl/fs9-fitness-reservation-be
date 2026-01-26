@@ -30,18 +30,25 @@ export function validate(schema: z.ZodType) {
         req.body = data.body;
       }
       if (data.query) {
-        req.query = data.query;
+
+        Object.keys(data.query).forEach((key) => {
+          (req.query as any)[key] = data.query[key];
+        });
       }
       if (data.params) {
-        req.params = data.params;
+        Object.keys(data.params).forEach((key) => {
+          (req.params as any)[key] = data.params[key];
+        });
       }
 
       next();
     } catch (error) {
+      console.error('Validation error:', error);
       return res.status(400).json({
         success: false,
         error: {
           message: '요청 검증 중 오류가 발생했습니다',
+          details: error instanceof Error ? error.message : String(error),
         },
       });
     }
