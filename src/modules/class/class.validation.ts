@@ -13,10 +13,8 @@ export const createClassSchema = z.object({
     level: z.enum(CLASS_LEVELS, { message: `난이도는 ${CLASS_LEVELS.join(', ')} 중 하나여야 합니다` }), 
     description: z.string().max(2000, '상세 설명은 2000자 이하여야 합니다').exactOptional(),
     notice: z.string().max(1000, '공지사항은 1000자 이하여야 합니다').exactOptional(),
-    pricePoints: z.number().int('포인트는 정수여야 합니다').min(0, '포인트는 0 이상이어야 합니다'),
-    capacity: z.number().int('정원은 정수여야 합니다').min(1, '정원은 1명 이상이어야 합니다').max(100, '정원은 100명 이하여야 합니다'),
-    bannerUrl: imageUrlSchema.nullable().exactOptional(),
-    imgUrls: z.array(imageUrlSchema).max(3, '이미지는 최대 3개까지 업로드 가능합니다').default([]), 
+    pricePoints: z.coerce.number().int('포인트는 정수여야 합니다').min(0, '포인트는 0 이상이어야 합니다'),
+    capacity: z.coerce.number().int('정원은 정수여야 합니다').min(1, '정원은 1명 이상이어야 합니다').max(100, '정원은 100명 이하여야 합니다'),
   }),
 });
 

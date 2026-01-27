@@ -18,9 +18,19 @@ const classUpload = multer({
 });
 
 // 클래스 이미지 업로드 미들웨어
-export const uploadClassImages = classUpload.fields([
-  { name: 'images', maxCount: 3 },
-]);
+export const uploadClassImages = (req: Request, res: Response, next: NextFunction) => {
+  const contentType = req.headers['content-type'] || '';
+  
+  // multipart/form-data가 아니면 건너뛰기
+  if (!contentType.includes('multipart/form-data')) {
+    return next();
+  }
+  
+  // multipart/form-data인 경우에는 multer 실행
+  classUpload.fields([
+    { name: 'images', maxCount: 3 },
+  ])(req, res, next);
+};
 
 // multer 에러 핸들링 미들웨어
 export const handleUploadError = (

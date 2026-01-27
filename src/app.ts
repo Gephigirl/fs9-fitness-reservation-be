@@ -15,9 +15,10 @@ const app = express();
 // 미들웨어
 app.use(logger);
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' }, // 이미지 CORS 허용
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, 
 }));
 app.use(cors());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, requireRole } from '../../middlewares/auth.js';
-import { validate } from '../../middlewares/validate.js'; 
+import { validate } from '../../middlewares/validate.js';
+import { uploadClassImages, handleUploadError } from '../../middlewares/upload.js';
 
 import {
   createClassHandler,
@@ -43,6 +44,8 @@ router.post(
   '/',
   authenticate,
   requireRole('SELLER'),
+  uploadClassImages,
+  handleUploadError,
   validate(createClassSchema),
   createClassHandler
 );
@@ -52,6 +55,8 @@ router.patch(
   '/:id',
   authenticate,
   requireRole('SELLER'),
+  uploadClassImages,
+  handleUploadError,
   validate(updateClassSchema),
   updateClassHandler
 );
