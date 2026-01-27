@@ -3,6 +3,7 @@ import { UserRole } from '@prisma/client';
 import * as classService from './class.service.js';
 import type { AuthRequest } from '../../middlewares/auth.js';
 import { env } from '../../config/env.js';
+import { AppError } from '../../middlewares/errorHandler.js';
 
 // multer 파일 타입 정의
 interface MulterFile {
@@ -86,10 +87,7 @@ export async function getClassByIdHandler(req: Request, res: Response, next: Nex
     const userRole = authReq.user?.role;
     const { id } = req.params;
     if (!id || typeof id !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: { message: '클래스 ID가 필요합니다' },
-      });
+      throw new AppError(400, '클래스 ID가 필요합니다', 'MISSING_CLASS_ID');
     }
     const classData = await classService.getClassById(id, userRole);
 
@@ -109,10 +107,7 @@ export async function updateClassHandler(req: Request, res: Response, next: Next
     const { id } = req.params;
     
     if (!id || typeof id !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: { message: '클래스 ID가 필요합니다' },
-      });
+      throw new AppError(400, '클래스 ID가 필요합니다', 'MISSING_CLASS_ID');
     }
     
     const { bannerUrl, imgUrls } = getFileUrls(req);
@@ -142,10 +137,7 @@ export async function deleteClassHandler(req: Request, res: Response, next: Next
     const { id } = req.params;
     
     if (!id || typeof id !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: { message: '클래스 ID가 필요합니다' },
-      });
+      throw new AppError(400, '클래스 ID가 필요합니다', 'MISSING_CLASS_ID');
     }
     
     const result = await classService.deleteClass(authReq.user.id, id);
@@ -167,10 +159,7 @@ export async function approveClassHandler(req: Request, res: Response, next: Nex
     const { id } = req.params;
     
     if (!id || typeof id !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: { message: '클래스 ID가 필요합니다' },
-      });
+      throw new AppError(400, '클래스 ID가 필요합니다', 'MISSING_CLASS_ID');
     }
     
     const updatedClass = await classService.approveClass(id);
@@ -191,10 +180,7 @@ export async function rejectClassHandler(req: Request, res: Response, next: Next
     const { id } = req.params;
     
     if (!id || typeof id !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: { message: '클래스 ID가 필요합니다' },
-      });
+      throw new AppError(400, '클래스 ID가 필요합니다', 'MISSING_CLASS_ID');
     }
     
     const updatedClass = await classService.rejectClass(id, req.body);
@@ -217,10 +203,7 @@ export async function createSlotHandler(req: Request, res: Response, next: NextF
     const { id } = req.params; // classId
     
     if (!id || typeof id !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: { message: '클래스 ID가 필요합니다' },
-      });
+      throw new AppError(400, '클래스 ID가 필요합니다', 'MISSING_CLASS_ID');
     }
     
     const newSlot = await classService.createSlot(authReq.user.id, id, req.body);
@@ -242,10 +225,7 @@ export async function updateSlotHandler(req: Request, res: Response, next: NextF
     const { slotId } = req.params;
     
     if (!slotId || typeof slotId !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: { message: '슬롯 ID가 필요합니다' },
-      });
+      throw new AppError(400, '슬롯 ID가 필요합니다', 'MISSING_SLOT_ID');
     }
     
     const updatedSlot = await classService.updateSlot(authReq.user.id, slotId, req.body);
@@ -267,10 +247,7 @@ export async function deleteSlotHandler(req: Request, res: Response, next: NextF
     const { slotId } = req.params;
     
     if (!slotId || typeof slotId !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: { message: '슬롯 ID가 필요합니다' },
-      });
+      throw new AppError(400, '슬롯 ID가 필요합니다', 'MISSING_SLOT_ID');
     }
     
     const result = await classService.deleteSlot(authReq.user.id, slotId);
