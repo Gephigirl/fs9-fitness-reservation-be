@@ -12,17 +12,7 @@ export function validate(schema: z.ZodType) {
       });
 
       if (!validationResult.success) {
-        const errorMessage = validationResult.error.issues
-          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-          .join(', ');
-
-        return res.status(400).json({
-          success: false,
-          error: {
-            message: '요청 데이터가 유효하지 않습니다',
-            details: errorMessage,
-          },
-        });
+        return next(validationResult.error);
       }
 
       const data = validationResult.data as any;
@@ -43,14 +33,7 @@ export function validate(schema: z.ZodType) {
 
       next();
     } catch (error) {
-      console.error('Validation error:', error);
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: '요청 검증 중 오류가 발생했습니다',
-          details: error instanceof Error ? error.message : String(error),
-        },
-      });
+      next(error);
     }
   };
 }
