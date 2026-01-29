@@ -1,4 +1,4 @@
-import { ClassStatus, UserRole } from "@prisma/client";
+import { ClassStatus, UserRole, Prisma } from "@prisma/client";
 import type {
   CreateClassInput,
   UpdateClassInput,
@@ -33,6 +33,7 @@ export async function createClass(
     capacity: data.capacity,
     bannerUrl: data.bannerUrl ?? null,
     imgUrls: data.imgUrls ?? [],
+    schedule: data.schedule ?? null,
     status: ClassStatus.PENDING,
   });
 
@@ -140,6 +141,10 @@ export async function updateClass(
         ? data.bannerUrl
         : (existingClass.bannerUrl ?? null),
     imgUrls: data.imgUrls !== undefined ? data.imgUrls : existingClass.imgUrls,
+    schedule:
+      data.schedule !== undefined
+        ? data.schedule
+        : (existingClass.schedule ?? null),
   };
 
   // 클래스 정원이 변경되면 모든 슬롯 정원도 업데이트
