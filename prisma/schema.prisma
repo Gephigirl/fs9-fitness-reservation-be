@@ -121,7 +121,7 @@ model ClassSlot {
   id String @id @default(cuid()) // 시간대별 슬롯 PK
 
   classId String @map("class_id") // 소속 클래스
-  class   Class  @relation(fields: [classId], references: [id])
+  class   Class  @relation(fields: [classId], references: [id],onDelete: Cascade)
 
   startAt DateTime @map("start_at") // 시작 시간
   endAt   DateTime @map("end_at") // 종료 시간
