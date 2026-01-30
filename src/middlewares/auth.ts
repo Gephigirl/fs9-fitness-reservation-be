@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '@prisma/client';
-import { env } from '../config/env.js';
-import { AppError } from './errorHandler.js';
+import { env } from '../config/env.ts';
+import { AppError } from './errorHandler.ts';
 
 export interface AuthRequest extends Request {
   user: {

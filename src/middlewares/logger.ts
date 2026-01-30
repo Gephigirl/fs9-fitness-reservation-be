@@ -1,7 +1,7 @@
 import morgan from 'morgan';
 import type { Request, Response } from 'express';
-import { env } from '../config/env.js';
-import type { AuthRequest } from './auth.js';
+import { env } from '../config/env.ts';
+import type { AuthRequest } from './auth.ts';
 
 // 커스텀 토큰: 유저 role
 morgan.token('user-role', (req: Request) => {

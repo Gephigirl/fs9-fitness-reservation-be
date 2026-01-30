@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
-import { env } from '../config/env.js';
+import { env } from '../config/env.ts';
 
 // 커스텀 에러 클래스
 export class AppError extends Error {
