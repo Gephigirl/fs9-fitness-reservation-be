@@ -5,7 +5,7 @@ import {
   imageFileFilter,
   MAX_FILE_SIZE,
   UPLOAD_PATHS,
-} from '../utils/upload/upload.config.js';
+} from '../utils/upload/upload.config.ts';
 
 // 클래스 이미지 업로드 설정
 const classUpload = multer({

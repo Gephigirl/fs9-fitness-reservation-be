@@ -3,9 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import classRouter from './modules/class/class.routes.js';
-import { logger } from './middlewares/logger.js';
-import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
+import classRouter from './modules/class/class.routes.ts';
+import { logger } from './middlewares/logger.ts';
+import { errorHandler, notFoundHandler } from './middlewares/errorHandler.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
