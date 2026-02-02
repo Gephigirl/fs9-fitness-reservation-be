@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  
 }
 
 enum UserRole {
@@ -102,9 +102,9 @@ model Class {
   bannerUrl String?  @map("banner_url") // 배너 이미지
   imgUrls   String[] @map("img_urls") // 소개 이미지들
 
-  status       ClassStatus @default(PENDING) // 승인 상태
-  rejectReason String?     @map("reject_reason") // 반려 사유
-
+  status       ClassStatus   @default(PENDING) // 승인 상태
+  rejectReason String?       @map("reject_reason") // 반려 사유
+  schedule     Json?         @map("schedule") // 스케줄(요일 별 슬롯)
   slots        ClassSlot[] // 시간대별 슬롯들
   reservations Reservation[] // 예약들
   reviews      Review[] // 리뷰들
@@ -121,14 +121,14 @@ model ClassSlot {
   id String @id @default(cuid()) // 시간대별 슬롯 PK
 
   classId String @map("class_id") // 소속 클래스
-  class   Class  @relation(fields: [classId], references: [id])
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
 
   startAt DateTime @map("start_at") // 시작 시간
   endAt   DateTime @map("end_at") // 종료 시간
 
-  capacity Int // 슬롯 정원
-  currentReservation Int @default(0) @map("current_reservation") // 동시성 제어용
-  isOpen   Boolean @default(true) @map("is_open") // 예약 가능 여부
+  capacity           Int // 슬롯 정원
+  currentReservation Int     @default(0) @map("current_reservation") // 동시성 제어용
+  isOpen             Boolean @default(true) @map("is_open") // 예약 가능 여부
 
   reservations Reservation[] // 이 슬롯 예약들
 
@@ -166,7 +166,7 @@ model Reservation {
   pointHistories PointHistory[] // 포인트 내역들
 
   canceledAt DateTime? @map("canceled_at") // 취소/거절 처리 시각
-  canceledBy UserRole?   @map("canceled_by") // 취소 주체(유저/판매자/관리자)
+  canceledBy UserRole? @map("canceled_by") // 취소 주체(유저/판매자/관리자)
   cancelNote String?   @map("cancel_note") // 취소/거절 사유
   adminMemo  String?   @map("admin_memo") // 관리자 메모
 
@@ -189,10 +189,10 @@ model PointHistory {
   userId String @map("user_id") // 대상 유저
   user   User   @relation(fields: [userId], references: [id])
 
-  type   PointUsed // CHARGE/USE/REFUND/ADMIN
-  amount Int // 변동량
-  balanceBefore Int @map("balance_before") // 변동 전 잔액
-  balanceAfter  Int @map("balance_after")  // 변동 후 잔액
+  type          PointUsed // CHARGE/USE/REFUND/ADMIN
+  amount        Int // 변동량
+  balanceBefore Int       @map("balance_before") // 변동 전 잔액
+  balanceAfter  Int       @map("balance_after") // 변동 후 잔액
 
   reservationId String?      @map("reservation_id") // 차감/환불이 걸린 예약
   reservation   Reservation? @relation(fields: [reservationId], references: [id])

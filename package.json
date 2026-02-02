@@ -5,13 +5,22 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+<<<<<<< HEAD
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "prisma generate && tsc",
+=======
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+>>>>>>> 7272d3204a60723cc6ecef981964054b9f5834d5
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+<<<<<<< HEAD
     "test": "echo \"Error: no test specified\" && exit 0",
+=======
+    "prisma:seed": "tsx prisma/seed.ts",
+>>>>>>> 7272d3204a60723cc6ecef981964054b9f5834d5
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,json,md}\"",
     "prepare": "husky"
@@ -29,16 +38,29 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+<<<<<<< HEAD
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
+=======
+    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/client": "^7.2.0",
+>>>>>>> 7272d3204a60723cc6ecef981964054b9f5834d5
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
+<<<<<<< HEAD
     "pg": "^8.17.2",
     "pnpm": "^10.28.1",
+=======
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "pg": "^8.13.1",
+    "prisma": "^7.2.0",
+    "tsx": "^4.21.0",
+>>>>>>> 7272d3204a60723cc6ecef981964054b9f5834d5
     "zod": "^4.3.5"
   },
   "devDependencies": {
@@ -49,16 +71,25 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+<<<<<<< HEAD
     "@types/node": "^25.0.10",
     "@types/pg": "^8.16.0",
+=======
+    "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^25.0.9",
+>>>>>>> 7272d3204a60723cc6ecef981964054b9f5834d5
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.0",
+<<<<<<< HEAD
     "prisma": "^7.3.0",
     "ts-node-dev": "^2.0.0",
+=======
+>>>>>>> 7272d3204a60723cc6ecef981964054b9f5834d5
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.53.0"
   }
