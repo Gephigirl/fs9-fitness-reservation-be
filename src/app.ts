@@ -3,7 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import classRouter from './modules/class/class.routes.ts';
+import classRouter from './modules/class/class.route.ts';
+import reservationRouter from './modules/reservation/reservation.route.ts';
 import { logger } from './middlewares/logger.ts';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.ts';
 
@@ -31,6 +32,7 @@ app.get('/health', (req, res) => {
 
 // 라우터
 app.use('/api/classes', classRouter);
+app.use('/api/reservations', reservationRouter);
 
 
 // 에러핸들러
