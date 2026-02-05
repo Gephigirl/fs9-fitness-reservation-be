@@ -2,6 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import type { Request } from 'express';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,10 +37,10 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export const createStorage = (uploadPath: string) => {
   return multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: (req: Request, file, cb) => {
       cb(null, uploadPath);
     },
-    filename: (req, file, cb) => {
+    filename: (req: Request, file, cb) => {
       const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
       const ext = path.extname(file.originalname).toLowerCase();
       const basename = path.basename(file.originalname, ext);
@@ -51,9 +52,9 @@ export const createStorage = (uploadPath: string) => {
 
 // 파일 필터
 export const imageFileFilter = (
-  req: Express.Request,
-  file: Express.Multer.File,
-  cb: multer.FileFilterCallback
+  req: Request,
+  file: any,
+  cb: any
 ): void => {
   const ext = path.extname(file.originalname).toLowerCase();
   const mimeType = file.mimetype.toLowerCase();
