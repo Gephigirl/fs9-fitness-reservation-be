@@ -6,15 +6,16 @@ import type {
   RejectClassInput,
   CreateSlotInput,
   UpdateSlotInput,
-} from "./class.validation.js";
-import type { PaginationResponse } from "../../types/common.types.js";
-import * as classRepository from "./class.repository.js";
-import { AppError } from "../../middlewares/errorHandler.js";
+} from "./class.validation.ts";
+import type { PaginationResponse } from "../../types/common.types.ts";
+import * as classRepository from "./class.repository.ts";
+import * as reservationService from "../reservation/reservation.service.ts";
+import { AppError } from "../../middlewares/errorHandler.ts";
 
 // 클래스 생성
 export async function createClass(
   userId: string,
-  data: CreateClassInput & { bannerUrl?: string; imgUrls?: string[] },
+  data: CreateClassInput & { bannerUrl?: string; imgUrls?: string[] }
 ) {
   const center = await classRepository.findCenterByOwnerId(userId);
 
@@ -45,20 +46,52 @@ export async function createClass(
 export async function getClasses(
   query: QueryClassInput,
   userRole?: UserRole,
+  userId?: string
 ): Promise<
   PaginationResponse<
     Awaited<ReturnType<typeof classRepository.findManyClasses>>[0]
   >
 > {
-  const { category, level, status, centerId, page = 1, limit = 10 } = query;
+  const {
+    category,
+    level,
+    status,
+    centerId,
+    search,
+    page = 1,
+    limit = 10,
+  } = query;
 
   const where: any = {};
   if (category) where.category = category;
   if (level) where.level = level;
   if (centerId) where.centerId = centerId;
 
-  if (userRole === UserRole.CUSTOMER) {
-    // customer는 승인된 클래스만 볼 수 있음
+  // 판매자인 경우 자기 센터의 클래스만 조회
+  if (userRole === UserRole.SELLER && userId) {
+    const center = await classRepository.findCenterByOwnerId(userId);
+    if (center) {
+      where.centerId = center.id;
+    }
+  }
+
+  if (search) {
+    if (query.searchType === "centerName") {
+      where.center = {
+        name: { contains: search, mode: "insensitive" },
+      };
+    } else if (query.searchType === "className") {
+      where.title = { contains: search, mode: "insensitive" };
+    } else {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
+    }
+  }
+
+  if (!userRole || userRole === UserRole.CUSTOMER) {
+    // 승인된 클래스만 노출
     where.status = ClassStatus.APPROVED;
   } else {
     if (status) where.status = status;
@@ -90,8 +123,8 @@ export async function getClassById(classId: string, userRole?: UserRole) {
   }
 
   if (
-    userRole === UserRole.CUSTOMER &&
-    classData.status === ClassStatus.REJECTED
+    (!userRole || userRole === UserRole.CUSTOMER) &&
+    classData.status !== ClassStatus.APPROVED
   ) {
     throw new AppError(404, "클래스를 찾을 수 없습니다", "CLASS_NOT_FOUND");
   }
@@ -99,12 +132,29 @@ export async function getClassById(classId: string, userRole?: UserRole) {
   return classData;
 }
 
+// 클래스 통계 조회 (전체, 승인, 대기, 반려)
+export async function getClassStats() {
+  const [total, approved, pending, rejected] = await Promise.all([
+    classRepository.countClassesByStatus(),
+    classRepository.countClassesByStatus(ClassStatus.APPROVED),
+    classRepository.countClassesByStatus(ClassStatus.PENDING),
+    classRepository.countClassesByStatus(ClassStatus.REJECTED),
+  ]);
+
+  return {
+    total,
+    approved,
+    pending,
+    rejected,
+  };
+}
+
 // 클래스 수정
 
 export async function updateClass(
   userId: string,
   classId: string,
-  data: UpdateClassInput & { bannerUrl?: string; imgUrls?: string[] },
+  data: UpdateClassInput & { bannerUrl?: string; imgUrls?: string[] }
 ) {
   const existingClass = await classRepository.findClassWithCenter(classId);
 
@@ -116,8 +166,11 @@ export async function updateClass(
     throw new AppError(403, "클래스 수정 권한이 없습니다", "FORBIDDEN");
   }
 
-  // 클래스 수정 시 모든 예약 취소
-  await classRepository.cancelAllReservationsForClass(classId);
+  // 클래스 수정 시 모든 예약 취소 및 환불
+  await reservationService.cancelReservationsByClassChange(
+    classId,
+    "클래스 정보가 변경되어 예약이 취소되었습니다"
+  );
 
   const updateData = {
     title: data.title !== undefined ? data.title : existingClass.title,
@@ -170,7 +223,11 @@ export async function deleteClass(userId: string, classId: string) {
     throw new AppError(403, "클래스 삭제 권한이 없습니다", "FORBIDDEN");
   }
 
-  await classRepository.cancelAllReservationsForClass(classId);
+  // 클래스 삭제 시 모든 예약 취소 및 환불
+  await reservationService.cancelReservationsByClassChange(
+    classId,
+    "클래스가 삭제되어 예약이 취소되었습니다"
+  );
   await classRepository.deleteClass(classId);
 
   return { message: "클래스가 삭제되었습니다" };
@@ -189,13 +246,13 @@ export async function approveClass(classId: string) {
     throw new AppError(
       400,
       "승인 대기 중인 클래스만 처리할 수 있습니다",
-      "INVALID_STATUS",
+      "INVALID_STATUS"
     );
   }
 
   const updatedClass = await classRepository.updateClassStatus(
     classId,
-    ClassStatus.APPROVED,
+    ClassStatus.APPROVED
   );
 
   return updatedClass;
@@ -214,14 +271,14 @@ export async function rejectClass(classId: string, data: RejectClassInput) {
     throw new AppError(
       400,
       "승인 대기 중인 클래스만 처리할 수 있습니다",
-      "INVALID_STATUS",
+      "INVALID_STATUS"
     );
   }
 
   const updatedClass = await classRepository.updateClassStatus(
     classId,
     ClassStatus.REJECTED,
-    data.rejectReason,
+    data.rejectReason
   );
 
   return updatedClass;
@@ -233,7 +290,7 @@ export async function createSlot(
   userId: string,
   classId: string,
   data: CreateSlotInput,
-  now: Date = new Date(),
+  now: Date = new Date()
 ) {
   const classData = await classRepository.findClassWithCenterForSlot(classId);
 
@@ -249,19 +306,19 @@ export async function createSlot(
     throw new AppError(
       400,
       `슬롯 정원은 클래스 정원(${classData.capacity}명) 이하여야 합니다`,
-      "INVALID_CAPACITY",
+      "INVALID_CAPACITY"
     );
   }
 
   const startAt = new Date(
-    `${data.date}T${String(data.hour).padStart(2, "0")}:00:00+09:00`,
+    `${data.date}T${String(data.hour).padStart(2, "0")}:00:00+09:00`
   );
 
   if (isNaN(startAt.getTime())) {
     throw new AppError(
       400,
       "올바른 날짜 형식이 아닙니다",
-      "INVALID_DATE_FORMAT",
+      "INVALID_DATE_FORMAT"
     );
   }
 
@@ -269,7 +326,7 @@ export async function createSlot(
     throw new AppError(
       400,
       "과거 날짜는 슬롯으로 생성할 수 없습니다",
-      "INVALID_DATE",
+      "INVALID_DATE"
     );
   }
 
@@ -279,14 +336,14 @@ export async function createSlot(
   const overlappingSlot = await classRepository.findOverlappingSlot(
     classId,
     startAt,
-    endAt,
+    endAt
   );
 
   if (overlappingSlot) {
     throw new AppError(
       409,
       "해당 시간대에 이미 슬롯이 존재합니다",
-      "DUPLICATE_SLOT",
+      "DUPLICATE_SLOT"
     );
   }
 
@@ -306,7 +363,7 @@ export async function createSlot(
 export async function updateSlot(
   userId: string,
   slotId: string,
-  data: UpdateSlotInput,
+  data: UpdateSlotInput
 ) {
   const slot = await classRepository.findSlotWithClassAndReservations(slotId);
 
@@ -336,10 +393,108 @@ export async function deleteSlot(userId: string, slotId: string) {
     throw new AppError(403, "슬롯 삭제 권한이 없습니다", "FORBIDDEN");
   }
 
-  // 슬롯 삭제 시 모든 예약 취소
-  await classRepository.cancelAllReservationsForSlot(slotId);
+  // 슬롯 삭제 시 모든 예약 취소 및 환불
+  await reservationService.cancelReservationsBySlotChange(
+    slotId,
+    "슬롯이 삭제되어 예약이 취소되었습니다"
+  );
 
   await classRepository.deleteSlot(slotId);
 
   return { message: "슬롯이 삭제되었습니다" };
+}
+
+// 스케줄 기반 슬롯 자동 생성
+
+const DAY_MAP: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+export async function generateSlotsFromSchedule(
+  userId: string,
+  classId: string,
+  startDate: Date,
+  endDate: Date
+) {
+  const classData = await classRepository.findClassWithCenterForSlot(classId);
+
+  if (!classData) {
+    throw new AppError(404, "클래스를 찾을 수 없습니다", "CLASS_NOT_FOUND");
+  }
+
+  if (classData.center.ownerId !== userId) {
+    throw new AppError(403, "슬롯 생성 권한이 없습니다", "FORBIDDEN");
+  }
+
+  if (!classData.schedule) {
+    throw new AppError(400, "클래스에 스케줄 정보가 없습니다", "NO_SCHEDULE");
+  }
+
+  const schedule = classData.schedule as Record<string, string | null>;
+  let createdCount = 0;
+  let skippedCount = 0;
+
+  // startDate부터 endDate까지 날짜 순회
+  const currentDate = new Date(startDate);
+  currentDate.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  while (currentDate <= end) {
+    const dayOfWeek = currentDate.getDay();
+    const dayName = Object.keys(DAY_MAP).find(
+      (key) => DAY_MAP[key] === dayOfWeek
+    );
+
+    if (dayName && schedule[dayName]) {
+      const timeStr = schedule[dayName] as string;
+      const [hourStr] = timeStr.split(":");
+
+      if (!hourStr) continue;
+
+      const hour = parseInt(hourStr, 10);
+
+      if (!isNaN(hour) && hour >= 0 && hour <= 23) {
+        const startAt = new Date(currentDate);
+        startAt.setHours(hour, 0, 0, 0);
+
+        const endAt = new Date(startAt);
+        endAt.setHours(endAt.getHours() + 1);
+
+        // 이미 존재하는 슬롯인지 확인
+        const existingSlot = await classRepository.findOverlappingSlot(
+          classId,
+          startAt,
+          endAt
+        );
+
+        if (!existingSlot) {
+          await classRepository.createSlot({
+            classId,
+            startAt,
+            endAt,
+            capacity: classData.capacity,
+            isOpen: true,
+          });
+          createdCount++;
+        } else {
+          skippedCount++;
+        }
+      }
+    }
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return {
+    message: "슬롯 생성이 완료되었습니다",
+    createdCount,
+    skippedCount,
+  };
 }

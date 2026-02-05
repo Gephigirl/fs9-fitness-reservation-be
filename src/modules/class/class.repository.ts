@@ -1,6 +1,5 @@
-import prisma from '../../config/prisma.js';
-import { ClassStatus, Prisma } from '@prisma/client';
-
+import prisma from "../../config/prisma.ts";
+import { ClassStatus, Prisma } from "@prisma/client";
 
 export async function findCenterByOwnerId(ownerId: string) {
   return prisma.center.findUnique({
@@ -37,14 +36,24 @@ export async function findManyClasses(params: {
       _count: {
         select: {
           reviews: true,
-          reservations: true,
+          reservations: {
+            where: {
+              status: "BOOKED",
+            },
+          },
         },
       },
     },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
   });
+}
+
+// 상태별 클래스 개수 카운트
+export async function countClassesByStatus(status?: ClassStatus) {
+  const where: Prisma.ClassWhereInput = status ? { status } : {};
+  return prisma.class.count({ where });
 }
 
 export async function countClasses(where: Prisma.ClassWhereInput) {
@@ -74,14 +83,14 @@ export async function findClassById(classId: string, now: Date = new Date()) {
           },
         },
         orderBy: {
-          startAt: 'asc',
+          startAt: "asc",
         },
         include: {
           _count: {
             select: {
               reservations: {
                 where: {
-                  status: 'BOOKED',
+                  status: "BOOKED",
                 },
               },
             },
@@ -91,7 +100,7 @@ export async function findClassById(classId: string, now: Date = new Date()) {
       reviews: {
         take: 5,
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
         include: {
           user: {
@@ -131,7 +140,7 @@ export async function findClassWithReservationCount(classId: string) {
           reservations: {
             where: {
               status: {
-                in: ['BOOKED', 'COMPLETED'],
+                in: ["BOOKED", "COMPLETED"],
               },
             },
           },
@@ -141,7 +150,10 @@ export async function findClassWithReservationCount(classId: string) {
   });
 }
 
-export async function updateClass(classId: string, data: Prisma.ClassUpdateInput) {
+export async function updateClass(
+  classId: string,
+  data: Prisma.ClassUpdateInput,
+) {
   return prisma.class.update({
     where: { id: classId },
     data,
@@ -163,7 +175,11 @@ export async function findClassSimple(classId: string) {
   });
 }
 
-export async function updateClassStatus(classId: string, status: ClassStatus, rejectReason?: string) {
+export async function updateClassStatus(
+  classId: string,
+  status: ClassStatus,
+  rejectReason?: string,
+) {
   return prisma.class.update({
     where: { id: classId },
     data: {
@@ -186,7 +202,6 @@ export async function updateClassStatus(classId: string, status: ClassStatus, re
   });
 }
 
-
 export async function findClassWithCenterForSlot(classId: string) {
   return prisma.class.findUnique({
     where: { id: classId },
@@ -195,7 +210,11 @@ export async function findClassWithCenterForSlot(classId: string) {
     },
   });
 }
-export async function findOverlappingSlot(classId: string, startAt: Date, endAt: Date) {
+export async function findOverlappingSlot(
+  classId: string,
+  startAt: Date,
+  endAt: Date,
+) {
   return prisma.classSlot.findFirst({
     where: {
       classId,
@@ -223,7 +242,7 @@ export async function findSlotWithClassAndReservations(slotId: string) {
         select: {
           reservations: {
             where: {
-              status: 'BOOKED',
+              status: "BOOKED",
             },
           },
         },
@@ -232,7 +251,10 @@ export async function findSlotWithClassAndReservations(slotId: string) {
   });
 }
 
-export async function updateSlot(slotId: string, data: Prisma.ClassSlotUpdateInput) {
+export async function updateSlot(
+  slotId: string,
+  data: Prisma.ClassSlotUpdateInput,
+) {
   return prisma.classSlot.update({
     where: { id: slotId },
     data,
@@ -253,7 +275,7 @@ export async function findSlotForDelete(slotId: string) {
           reservations: {
             where: {
               status: {
-                in: ['BOOKED', 'COMPLETED'],
+                in: ["BOOKED", "COMPLETED"],
               },
             },
           },
@@ -276,10 +298,10 @@ export async function cancelAllReservationsForClass(classId: string) {
       slot: {
         classId,
       },
-      status: 'BOOKED',
+      status: "BOOKED",
     },
     data: {
-      status: 'CANCELED',
+      status: "CANCELED",
     },
   });
 }
@@ -289,16 +311,19 @@ export async function cancelAllReservationsForSlot(slotId: string) {
   return prisma.reservation.updateMany({
     where: {
       slotId,
-      status: 'BOOKED',
+      status: "BOOKED",
     },
     data: {
-      status: 'CANCELED',
+      status: "CANCELED",
     },
   });
 }
 
 // 클래스의 모든 슬롯 정원 업데이트
-export async function updateAllSlotsCapacity(classId: string, capacity: number) {
+export async function updateAllSlotsCapacity(
+  classId: string,
+  capacity: number,
+) {
   return prisma.classSlot.updateMany({
     where: { classId },
     data: { capacity },
