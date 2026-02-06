@@ -7,7 +7,7 @@ import classRouter from './modules/class/class.route.ts';
 import reservationRouter from './modules/reservation/reservation.route.ts';
 import { logger } from './middlewares/logger.ts';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.ts';
-import authRouter from './modules/auth/auth.routes.ts';
+import authRouter from './modules/auth/auth.route.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

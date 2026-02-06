@@ -1,8 +1,8 @@
-import type { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { UserRole } from '@prisma/client';
-import { env } from '../config/env.ts';
-import { AppError } from './errorHandler.ts';
+import type { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { UserRole } from "@prisma/client";
+import { env } from "../config/env.ts";
+import { AppError } from "./errorHandler.ts";
 
 export interface AuthRequest extends Request {
   user: {
@@ -12,18 +12,47 @@ export interface AuthRequest extends Request {
   };
 }
 
+// 역할에 따른 권한 부여
+export function optionalAuthenticate(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next();
+    }
+    const token = authHeader.split(" ")[1];
+    if (!token) return next();
+
+    const decoded = jwt.verify(token, env.JWT_SECRET) as {
+      id: string;
+      email: string;
+      role: UserRole;
+    };
+    (req as AuthRequest).user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+    };
+    next();
+  } catch {
+    next();
+  }
+}
 
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError(401, '인증 토큰이 필요합니다');
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new AppError(401, "인증 토큰이 필요합니다");
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(" ")[1];
     if (!token) {
-      throw new AppError(401, '토큰이 올바르지 않습니다');
+      throw new AppError(401, "토큰이 올바르지 않습니다");
     }
 
     const decoded = jwt.verify(token, env.JWT_SECRET) as {
@@ -31,7 +60,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
       email: string;
       role: UserRole;
     };
- 
+
     (req as AuthRequest).user = {
       id: decoded.id,
       email: decoded.email,
@@ -40,11 +69,9 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 
     next();
   } catch (error) {
-
     next(error);
   }
 }
-
 
 export function requireRole(...allowedRoles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -52,11 +79,11 @@ export function requireRole(...allowedRoles: UserRole[]) {
       const authReq = req as AuthRequest;
 
       if (!authReq.user) {
-        throw new AppError(401, '인증이 필요합니다', 'AUTHENTICATION_REQUIRED');
+        throw new AppError(401, "인증이 필요합니다", "AUTHENTICATION_REQUIRED");
       }
 
       if (!allowedRoles.includes(authReq.user.role)) {
-        throw new AppError(403, '권한이 없습니다', 'FORBIDDEN');
+        throw new AppError(403, "권한이 없습니다", "FORBIDDEN");
       }
 
       next();

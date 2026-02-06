@@ -1,14 +1,19 @@
 import { Router } from "express";
-import { authenticate, requireRole } from "../../middlewares/auth.js";
-import { validate } from "../../middlewares/validate.js";
+import {
+  authenticate,
+  optionalAuthenticate,
+  requireRole,
+} from "../../middlewares/auth.ts";
+import { validate } from "../../middlewares/validate.ts";
 import {
   uploadClassImages,
   handleUploadError,
-} from "../../middlewares/upload.js";
+} from "../../middlewares/upload.ts";
 
 import {
   createClassHandler,
   getClassesHandler,
+  getClassStatsHandler,
   getClassByIdHandler,
   updateClassHandler,
   deleteClassHandler,
@@ -17,7 +22,8 @@ import {
   createSlotHandler,
   updateSlotHandler,
   deleteSlotHandler,
-} from "./class.controller.js";
+  generateSlotsHandler,
+} from "./class.controller.ts";
 
 import {
   createClassSchema,
@@ -27,15 +33,29 @@ import {
   rejectClassSchema,
   createSlotSchema,
   updateSlotSchema,
-} from "./class.validation.js";
+  generateSlotsSchema,
+} from "./class.validation.ts";
 
 const router = Router();
 
-// GET /classes - 클래스 목록 조회
-router.get("/", validate(queryClassSchema), getClassesHandler);
+// GET /classes/stats - 클래스 통계 조회 (관리자)
+router.get(
+  "/stats",
+  authenticate,
+  requireRole("ADMIN"),
+  getClassStatsHandler,
+);
 
-// GET /classes/:id - 클래스 상세 조회
-router.get("/:id", getClassByIdHandler);
+// GET /classes - 클래스 목록 조회 
+router.get(
+  "/",
+  optionalAuthenticate,
+  validate(queryClassSchema),
+  getClassesHandler,
+);
+
+// GET /classes/:id - 클래스 상세 조회 
+router.get("/:id", optionalAuthenticate, getClassByIdHandler);
 
 // POST /classes - 클래스 생성 (판매자, 인증 필요)
 router.post(
@@ -105,6 +125,15 @@ router.delete(
   authenticate,
   requireRole("SELLER"),
   deleteSlotHandler,
+);
+
+// POST /classes/:id/slots/generate - 스케줄 기반 슬롯 자동 생성 (판매자, 인증 필요)
+router.post(
+  "/:id/slots/generate",
+  authenticate,
+  requireRole("SELLER"),
+  validate(generateSlotsSchema),
+  generateSlotsHandler,
 );
 
 export default router;
