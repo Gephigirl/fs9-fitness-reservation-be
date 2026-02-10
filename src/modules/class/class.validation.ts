@@ -31,7 +31,7 @@ export const createClassSchema = z.object({
       .exactOptional(),
     notice: z
       .string()
-      .max(1000, "공지사항은 1000자 이하여야 합니다")
+      .max(1000, "주의사항은 1000자 이하여야 합니다")
       .exactOptional(),
     pricePoints: z.coerce
       .number()
@@ -83,6 +83,8 @@ export const queryClassSchema = z.object({
       .enum(Object.values(ClassStatus) as [string, ...string[]])
       .optional(),
     centerId: z.string().min(1, "올바른 센터 ID가 아닙니다").optional(),
+    search: z.string().optional(),
+    searchType: z.enum(["className", "centerName"]).optional(),
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(10),
   }),
@@ -120,6 +122,29 @@ export const updateSlotSchema = z.object({
   }),
 });
 
+// 스케줄 기반 슬롯 자동 생성
+export const generateSlotsSchema = z.object({
+  body: z
+    .object({
+      startDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식이어야 합니다"),
+      endDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식이어야 합니다"),
+    })
+    .refine(
+      (data) => {
+        const start = new Date(data.startDate);
+        const end = new Date(data.endDate);
+        return start <= end;
+      },
+      {
+        message: "시작 날짜는 종료 날짜보다 이전이어야 합니다",
+      },
+    ),
+});
+
 // 타입 추론
 export type CreateClassInput = z.infer<typeof createClassSchema>["body"];
 export type UpdateClassInput = z.infer<typeof updateClassSchema>["body"];
@@ -128,3 +153,4 @@ export type ApproveClassInput = z.infer<typeof approveClassSchema>["body"];
 export type RejectClassInput = z.infer<typeof rejectClassSchema>["body"];
 export type CreateSlotInput = z.infer<typeof createSlotSchema>["body"];
 export type UpdateSlotInput = z.infer<typeof updateSlotSchema>["body"];
+export type GenerateSlotsInput = z.infer<typeof generateSlotsSchema>["body"];

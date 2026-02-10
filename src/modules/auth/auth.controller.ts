@@ -3,15 +3,14 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import * as authService from './auth.service.ts';
+import * as centerService from '../center/center.service.ts';
 import { env } from '../../config/env.ts';
 
 const ACCESS_COOKIE_NAME = 'accessToken';
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
 function getCookieOptions(kind: 'access' | 'refresh') {
-  // NOTE:
-  // - FE는 Next rewrite로 /api -> BE 프록시를 쓰고 있어 쿠키는 "FE 도메인" 기준으로 저장됩니다.
-  // - dev(http)에서는 secure=false, sameSite=lax 로 처리합니다.
+
   const isProd = env.NODE_ENV === 'production';
   const maxAge =
     kind === 'access'
@@ -40,10 +39,16 @@ function clearAuthCookies(res: Response) {
 
 export async function signupHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const user = await authService.createUser(req.body);
+    const { center: centerData, ...userData } = req.body;
+    const user = await authService.createUser(userData);
+
+    let center = null;
+    if (userData.role === 'SELLER' && centerData) {
+      center = await centerService.createCenter(user.id, centerData);
+    }
     res.status(201).json({
       success: true,
-      data: user,
+      data: { ...user, center },
     });
   } catch (error) {
     next(error);
@@ -128,6 +133,8 @@ export async function updateUserHandler(req: Request, res: Response, next: NextF
 export default {
   signupHandler,
   loginHandler,
+  refreshHandler,
+  logoutHandler,
   getUserByIdHandler,
   updateUserHandler,
 };

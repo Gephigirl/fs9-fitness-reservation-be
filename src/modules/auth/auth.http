@@ -26,8 +26,15 @@ Content-Type: application/json
   "password": "{{password}}",
   "nickname": "판매자",
   "phone": "01099998888",
-  "role": "SELLER"
+  "role": "SELLER",
+  "center": {
+    "name": "피트니스센터A",
+    "address1": "서울특별시 강남구 테헤란로 123",
+    "address2": "4층"
+  }
 }
+
+
 
 ### 로그인 (CUSTOMER)
 # @name login
@@ -40,13 +47,14 @@ Content-Type: application/json
 }
 
 ### 로그인 (SELLER)
+# @name login
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
   "email": "{{email_seller}}",
   "password": "{{password}}"
-}   
+}
 
 ### 토큰 저장 (로그인 요청 후 실행)
 @accessToken = {{login.response.body.data.accessToken}}

@@ -1,9 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import { UserRole } from "@prisma/client";
-import * as classService from "./class.service.js";
-import type { AuthRequest } from "../../middlewares/auth.js";
-import { env } from "../../config/env.js";
-import { AppError } from "../../middlewares/errorHandler.js";
+import * as classService from "./class.service.ts";
+import type { AuthRequest } from "../../middlewares/auth.ts";
+import { env } from "../../config/env.ts";
+import { AppError } from "../../middlewares/errorHandler.ts";
 
 // multer 파일 타입 정의
 interface MulterFile {
@@ -36,7 +36,7 @@ function getFileUrls(req: Request) {
 export async function createClassHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const authReq = req as AuthRequest;
@@ -46,7 +46,7 @@ export async function createClassHandler(
       ...(bannerUrl && { bannerUrl }),
       ...(imgUrls.length > 0 && { imgUrls }),
     };
-    
+
     const newClass = await classService.createClass(authReq.user.id, classData);
 
     res.status(201).json({
@@ -58,27 +58,47 @@ export async function createClassHandler(
   }
 }
 
+// 클래스 통계 조회
+export async function getClassStatsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const stats = await classService.getClassStats();
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 //  클래스 목록 조회
 
 export async function getClassesHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const authReq = req as AuthRequest;
     const userRole = authReq.user?.role;
-    
+    const userId = authReq.user?.id;
+
     const query = {
       category: req.query.category as string | undefined,
       level: req.query.level as any,
       status: req.query.status as any,
       centerId: req.query.centerId as string | undefined,
+      search: req.query.search as string | undefined,
       page: req.query.page ? Number(req.query.page) : 1,
       limit: req.query.limit ? Number(req.query.limit) : 10,
     };
-    
-    const result = await classService.getClasses(query, userRole);
+
+    const result = await classService.getClasses(query, userRole, userId);
 
     res.status(200).json({
       success: true,
@@ -94,7 +114,7 @@ export async function getClassesHandler(
 export async function getClassByIdHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const authReq = req as AuthRequest;
@@ -118,7 +138,7 @@ export async function getClassByIdHandler(
 export async function updateClassHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const authReq = req as AuthRequest;
@@ -139,7 +159,7 @@ export async function updateClassHandler(
     const updatedClass = await classService.updateClass(
       authReq.user.id,
       id,
-      updateData,
+      updateData
     );
 
     res.status(200).json({
@@ -156,7 +176,7 @@ export async function updateClassHandler(
 export async function deleteClassHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const authReq = req as AuthRequest;
@@ -182,7 +202,7 @@ export async function deleteClassHandler(
 export async function approveClassHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const { id } = req.params;
@@ -207,7 +227,7 @@ export async function approveClassHandler(
 export async function rejectClassHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const { id } = req.params;
@@ -232,7 +252,7 @@ export async function rejectClassHandler(
 export async function createSlotHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const authReq = req as AuthRequest;
@@ -245,7 +265,7 @@ export async function createSlotHandler(
     const newSlot = await classService.createSlot(
       authReq.user.id,
       id,
-      req.body,
+      req.body
     );
 
     res.status(201).json({
@@ -262,7 +282,7 @@ export async function createSlotHandler(
 export async function updateSlotHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const authReq = req as AuthRequest;
@@ -275,7 +295,7 @@ export async function updateSlotHandler(
     const updatedSlot = await classService.updateSlot(
       authReq.user.id,
       slotId,
-      req.body,
+      req.body
     );
 
     res.status(200).json({
@@ -292,7 +312,7 @@ export async function updateSlotHandler(
 export async function deleteSlotHandler(
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) {
   try {
     const authReq = req as AuthRequest;
@@ -305,6 +325,38 @@ export async function deleteSlotHandler(
     const result = await classService.deleteSlot(authReq.user.id, slotId);
 
     res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// 스케줄 기반 슬롯 자동 생성
+
+export async function generateSlotsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const authReq = req as AuthRequest;
+    const { id } = req.params; // classId
+
+    if (!id || typeof id !== "string") {
+      throw new AppError(400, "클래스 ID가 필요합니다", "MISSING_CLASS_ID");
+    }
+
+    const { startDate, endDate } = req.body;
+    const result = await classService.generateSlotsFromSchedule(
+      authReq.user.id,
+      id,
+      new Date(startDate),
+      new Date(endDate)
+    );
+
+    res.status(201).json({
       success: true,
       data: result,
     });

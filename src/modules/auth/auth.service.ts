@@ -9,9 +9,14 @@ async function hashPassword(password: string) {
 }
 
 export async function createUser(user: any) {
-  const existingUser = await authRepo.findByEmail(user.email);
-  if (existingUser) {
+  const existingEmail = await authRepo.findByEmail(user.email);
+  if (existingEmail) {
     throw new AppError(409, '이미 존재하는 이메일입니다.');
+  }
+
+  const existingPhone = await authRepo.findByPhone(user.phone);
+  if (existingPhone) {
+    throw new AppError(409, '이미 존재하는 전화번호입니다.');
   }
 
   const hashedPassword = await hashPassword(user.password);

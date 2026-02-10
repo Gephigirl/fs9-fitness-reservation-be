@@ -1,13 +1,13 @@
 ### 변수 설정
-@baseUrl = http://localhost:4000/api
+@baseUrl = http://localhost:{dotenv PORT}/api
 
 ### 시딩 후 로그 보고 복붙
-@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNta3c2aTlwNjAwMDJibzh0cGVhbG5tNDAiLCJlbWFpbCI6ImN1c3RvbWVyQHRlc3QuY29tIiwicm9sZSI6IkNVU1RPTUVSIiwiaWF0IjoxNzY5NDkzMTA0LCJleHAiOjE3Njk1Nzk1MDR9.-P4JC226tgMHHLi8XWKz7TaSFdyLvASPhcGo0oAujuo
-@sellerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNta3c2aTlvOTAwMDBibzh0NDF1bm1sdW4iLCJlbWFpbCI6InNlbGxlckB0ZXN0LmNvbSIsInJvbGUiOiJTRUxMRVIiLCJpYXQiOjE3Njk0OTMxMDQsImV4cCI6MTc2OTU3OTUwNH0.NpAzjiI5O2kjPQTCBHP510c8cCmAGoQlA1auZj9KS-c
-@adminToken =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNta3c2aTlveTAwMDFibzh0amgxMjdsOHciLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzY5NDkzMTA0LCJleHAiOjE3Njk1Nzk1MDR9.oGsmSc8uevkMUFFuBayLd2CCmZJ_Cn-9FmFy1uOGetE
+@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbDRqNGp6ODAwMDJ4azh0NmtzNmVnODYiLCJlbWFpbCI6ImN1c3RvbWVyQHRlc3QuY29tIiwicm9sZSI6IkNVU1RPTUVSIiwiaWF0IjoxNzY5OTk4MDI5LCJleHAiOjE3NzAwODQ0Mjl9.3JL4t9Hrs63UA0GJoo9G9jAzFLU5RJcrNz8jLe-vNIw 
+@sellerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbDRqNGp3dDAwMDB4azh0bzE2dW5oNDEiLCJlbWFpbCI6InNlbGxlckB0ZXN0LmNvbSIsInJvbGUiOiJTRUxMRVIiLCJpYXQiOjE3Njk5OTgwMjksImV4cCI6MTc3MDA4NDQyOX0.9BWHaorRHlQ88eNIbob4KGj5nB1tpkv0jP-Cw67b90s  
+@adminToken =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbDRqNGp5ZTAwMDF4azh0ZXFpYmZzaG8iLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzY5OTk4MDI5LCJleHAiOjE3NzAwODQ0Mjl9.ixQs0Bk6rTRHp-4bNdumJQX7o8nAxi7fxahFiVFj7do
 
-@classId = cmkw7x39c0001ss8tn6zi8gk2
-@slotId = cmkw7lhi60000408tcj3vl90x
+@classId = cml4jf42j00075c8tniiyf2qw
+@slotId = cml4jg6ze000a5c8t0hcbvocx
 
 ### 1. 클래스 생성 (판매자)
 POST {{baseUrl}}/classes
@@ -60,11 +60,18 @@ Content-Type: image/png
 ------WebKitFormBoundary--
 
 
+### 1-1. 클래스 통계 조회 (관리자)
+GET {{baseUrl}}/classes/stats
+Authorization: Bearer {{adminToken}}
+
 ### 2. 클래스 목록 조회
 GET {{baseUrl}}/classes
 
 ### 3. 클래스 목록 조회 (필터링)
 GET {{baseUrl}}/classes?category=요가&level=초급&page=1&limit=10
+
+### 3-1. 클래스 목록 조회 (검색)
+GET {{baseUrl}}/classes?search=요가
 
 ### 4. 클래스 상세 조회
 GET {{baseUrl}}/classes/{{classId}}
@@ -125,8 +132,8 @@ Content-Type: application/json
 Authorization: Bearer {{sellerToken}}
 
 {
-  "date": "2026-01-28",
-  "hour": 12,
+  "date": "2026-02-18",
+  "hour": 14,
   "capacity": 15,
   "isOpen": true
 }
