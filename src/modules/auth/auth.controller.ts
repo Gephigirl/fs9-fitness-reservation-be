@@ -2,14 +2,22 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import * as authService from './auth.service.ts';
+import * as centerService from '../center/center.service.ts';
 
 
 export async function signupHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const user = await authService.createUser(req.body);
+    const { center: centerData, ...userData } = req.body;
+    const user = await authService.createUser(userData);
+
+    let center = null;
+    if (userData.role === 'SELLER' && centerData) {
+      center = await centerService.createCenter(user.id, centerData);
+    }
+
     res.status(201).json({
       success: true,
-      data: user,
+      data: { ...user, center },
     });
   } catch (error) {
     next(error);
