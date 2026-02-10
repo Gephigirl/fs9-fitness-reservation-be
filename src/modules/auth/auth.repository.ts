@@ -19,6 +19,14 @@ async function findByEmail(email: string) {
   });
 }
 
+async function findByPhone(phone: string) {
+  return await prisma.user.findUnique({
+    where: {
+      phone,
+    },
+  });
+}
+
 async function save(user: UserCreateInput) {
   return prisma.user.create({
     data: user,
@@ -37,6 +45,7 @@ async function update(id: string, data: any) {
 export default {
   findById,
   findByEmail,
+  findByPhone,
   save,
   update,
 };
