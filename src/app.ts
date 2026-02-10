@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import classRouter from "./modules/class/class.route.ts";
 import reservationRouter from "./modules/reservation/reservation.route.ts";
 import centerRouter from "./modules/center/center.route.ts";
+import notificationRouter from "./modules/notification/notification.route.ts";
 import { logger } from "./middlewares/logger.ts";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.ts";
 import authRouter from "./modules/auth/auth.route.ts";
@@ -41,6 +42,7 @@ app.get("/health", (req, res) => {
 app.use("/api/centers", centerRouter);
 app.use("/api/classes", classRouter);
 app.use("/api/reservations", reservationRouter);
+app.use("/api/notifications", notificationRouter);
 
 
 // 에러핸들러
