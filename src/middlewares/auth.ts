@@ -16,14 +16,14 @@ export interface AuthRequest extends Request {
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError(401, '인증 토큰이 필요합니다');
-    }
+    const cookieToken = (req as any).cookies?.accessToken as string | undefined;
 
-    const token = authHeader.split(' ')[1];
+    let token = cookieToken;
+    if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
     if (!token) {
-      throw new AppError(401, '토큰이 올바르지 않습니다');
+      throw new AppError(401, '인증 토큰이 필요합니다');
     }
 
     const decoded = jwt.verify(token, env.JWT_SECRET) as {

@@ -1,12 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import classRouter from './modules/class/class.routes.ts';
 import { logger } from './middlewares/logger.ts';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.ts';
-import authRouter from './modules/auth/auth.routes.ts';
+import authRouter from './modules/auth/auth.route.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +23,7 @@ app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use('/api/auth', authRouter);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

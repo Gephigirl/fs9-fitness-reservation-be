@@ -84,7 +84,7 @@ export async function refreshToken(userId: string, receivedToken: string) {
 }
 
 export async function signOut(userId: string) {
-  await authRepo.update(userId, { refreshToken: '' });
+  void userId;
 }
 
 export async function getUserById(id: string) {
