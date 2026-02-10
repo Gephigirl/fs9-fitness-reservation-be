@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import classRouter from "./modules/class/class.route.ts";
@@ -26,6 +27,7 @@ app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use("/api/auth", authRouter);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
@@ -39,6 +41,7 @@ app.get("/health", (req, res) => {
 app.use("/api/centers", centerRouter);
 app.use("/api/classes", classRouter);
 app.use("/api/reservations", reservationRouter);
+
 
 // 에러핸들러
 app.use(notFoundHandler);

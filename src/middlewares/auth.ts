@@ -12,18 +12,20 @@ export interface AuthRequest extends Request {
   };
 }
 
-// 역할에 따른 권한 부여
+// 선택 인증: 토큰이 있으면 req.user 세팅, 없으면 그냥 통과
 export function optionalAuthenticate(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return next();
+    const cookieToken = (req as any).cookies?.accessToken as string | undefined;
+
+    let token = cookieToken;
+    if (!token && authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
     }
-    const token = authHeader.split(" ")[1];
     if (!token) return next();
 
     const decoded = jwt.verify(token, env.JWT_SECRET) as {
@@ -31,11 +33,13 @@ export function optionalAuthenticate(
       email: string;
       role: UserRole;
     };
+
     (req as AuthRequest).user = {
       id: decoded.id,
       email: decoded.email,
       role: decoded.role,
     };
+
     next();
   } catch {
     next();
@@ -45,14 +49,14 @@ export function optionalAuthenticate(
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
+    const cookieToken = (req as any).cookies?.accessToken as string | undefined;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new AppError(401, "인증 토큰이 필요합니다");
+    let token = cookieToken;
+    if (!token && authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
     }
-
-    const token = authHeader.split(" ")[1];
     if (!token) {
-      throw new AppError(401, "토큰이 올바르지 않습니다");
+      throw new AppError(401, "인증 토큰이 필요합니다");
     }
 
     const decoded = jwt.verify(token, env.JWT_SECRET) as {
@@ -72,6 +76,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     next(error);
   }
 }
+
 
 export function requireRole(...allowedRoles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction) => {
