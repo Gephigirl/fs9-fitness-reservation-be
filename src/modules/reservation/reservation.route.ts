@@ -9,6 +9,7 @@ import {
   cancelMyReservationHandler,
   getSellerSlotsHandler,
   getSellerReservationsHandler,
+  getSellerReservationDetailHandler,
   cancelReservationBySellerHandler,
   completeReservationHandler,
   getAllReservationsHandler,
@@ -27,7 +28,7 @@ import {
 const router = Router();
 
 // POST /reservations 
-// [고객/판매자] 결제 및 예약하기
+// [고객] 결제 및 예약하기
 router.post(
   "/",
   authenticate,
@@ -37,7 +38,7 @@ router.post(
 );
 
 // GET /reservations 
-// [고객/판매자] 내 예약 조회 (예약중: ?status=BOOKED, 수강완료: ?status=COMPLETED)
+// [고객] 내 예약 조회 
 router.get(
   "/",
   authenticate,
@@ -47,7 +48,7 @@ router.get(
 );
 
 // GET /reservations/:id 
-// [고객/판매자] 예약 상세 조회
+// [고객] 예약 상세 조회
 router.get(
   "/:id",
   authenticate,
@@ -56,7 +57,7 @@ router.get(
 );
 
 // PATCH /reservations/:id/cancel 
-// [고객/판매자] 예약 취소 및 환불
+// [고객] 예약 취소 및 환불
 router.patch(
   "/:id/cancel",
   authenticate,
@@ -83,6 +84,15 @@ router.get(
   requireRole("SELLER"),
   validate(queryReservationSchema),
   getSellerReservationsHandler
+);
+
+// GET /seller/reservations/:id
+// [판매자] 예약 상세 조회 (결제정보 + 타임라인)
+router.get(
+  "/seller/reservations/:id",
+  authenticate,
+  requireRole("SELLER"),
+  getSellerReservationDetailHandler
 );
 
 // PATCH /seller/reservations/:id/cancel    

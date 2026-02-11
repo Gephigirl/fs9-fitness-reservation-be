@@ -44,6 +44,49 @@ export async function findReservationById(reservationId: string) {
   });
 }
 
+// [판매자] 예약 상세 조회 (결제정보 + 타임라인 포함)
+export async function findSellerReservationDetail(reservationId: string) {
+  return prisma.reservation.findUnique({
+    where: { id: reservationId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          nickname: true,
+          phone: true,
+          profileImgUrl: true,
+        },
+      },
+      class: {
+        include: {
+          center: true,
+        },
+      },
+      slot: true,
+      userCoupon: {
+        include: {
+          template: true,
+        },
+      },
+      review: true,
+      pointHistories: {
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          balanceBefore: true,
+          balanceAfter: true,
+          memo: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    },
+  });
+}
+
 // 예약 ID로 조회 (간단, 취소/완료 처리용)
 export async function findReservationSimple(reservationId: string) {
   return prisma.reservation.findUnique({
