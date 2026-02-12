@@ -1,4 +1,4 @@
-@baseUrl = http://localhost:3000/api
+@baseUrl = http://localhost:{{$dotenv PORT}}/api
 @email_customer = test@example.com
 @email_seller = seller@example.com
 @password = password123

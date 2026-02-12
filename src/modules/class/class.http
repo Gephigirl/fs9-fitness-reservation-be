@@ -1,13 +1,13 @@
 ### 변수 설정
-@baseUrl = http://localhost:{dotenv PORT}/api
+@baseUrl = http://localhost:{{$dotenv PORT}}/api
 
 ### 시딩 후 로그 보고 복붙
-@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbDRqNGp6ODAwMDJ4azh0NmtzNmVnODYiLCJlbWFpbCI6ImN1c3RvbWVyQHRlc3QuY29tIiwicm9sZSI6IkNVU1RPTUVSIiwiaWF0IjoxNzY5OTk4MDI5LCJleHAiOjE3NzAwODQ0Mjl9.3JL4t9Hrs63UA0GJoo9G9jAzFLU5RJcrNz8jLe-vNIw 
-@sellerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbDRqNGp3dDAwMDB4azh0bzE2dW5oNDEiLCJlbWFpbCI6InNlbGxlckB0ZXN0LmNvbSIsInJvbGUiOiJTRUxMRVIiLCJpYXQiOjE3Njk5OTgwMjksImV4cCI6MTc3MDA4NDQyOX0.9BWHaorRHlQ88eNIbob4KGj5nB1tpkv0jP-Cw67b90s  
-@adminToken =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbDRqNGp5ZTAwMDF4azh0ZXFpYmZzaG8iLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzY5OTk4MDI5LCJleHAiOjE3NzAwODQ0Mjl9.ixQs0Bk6rTRHp-4bNdumJQX7o8nAxi7fxahFiVFj7do
+@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbGlwY3UydDAwMDJ2ODh0eG40b3VidmgiLCJlbWFpbCI6ImN1c3RvbWVyQHRlc3QuY29tIiwicm9sZSI6IkNVU1RPTUVSIiwiaWF0IjoxNzcwODU1MDIwLCJleHAiOjE3NzA5NDE0MjB9.K5ELc3ZMYm6EZGZo56S8fXV1axaGMBO70vtXgGNoFMI
+@sellerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbGlwY3UwZTAwMDB2ODh0bmhxb2IxcmIiLCJlbWFpbCI6InNlbGxlckB0ZXN0LmNvbSIsInJvbGUiOiJTRUxMRVIiLCJpYXQiOjE3NzA4NTUwMjAsImV4cCI6MTc3MDk0MTQyMH0.xItKMKPiyS_4Ki6gwMhK3lpsWc__BnzHH8S0zhMIJQQ  
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbGlwY3UxcDAwMDF2ODh0a2ZyeDJmbnoiLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzcwODU1MDIwLCJleHAiOjE3NzA5NDE0MjB9.zKmNMjkQjp8fnSxEo-9Gmb2CiBGkVkKO6eM-u6HC7Ig
 
-@classId = cml4jf42j00075c8tniiyf2qw
-@slotId = cml4jg6ze000a5c8t0hcbvocx
+@classId = cmlj8jlck0008vg8twpvj5j36
+@slotId = cmlj8jycc0009vg8teje5g20l
 
 ### 1. 클래스 생성 (판매자)
 POST {{baseUrl}}/classes
@@ -73,10 +73,8 @@ GET {{baseUrl}}/classes?category=요가&level=초급&page=1&limit=10
 ### 3-1. 클래스 목록 조회 (검색)
 GET {{baseUrl}}/classes?search=요가
 
-### 4. 클래스 상세 조회
-GET {{baseUrl}}/classes/{{classId}}
 
-### 5. 클래스 수정 (판매자)
+### 4. 클래스 수정 (판매자)
 PATCH {{baseUrl}}/classes/{{classId}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
 Authorization: Bearer {{sellerToken}}
@@ -109,15 +107,13 @@ Content-Type: image/png
 < test/image2.png
 ------WebKitFormBoundary--
 
-### 6. 클래스 승인 (관리자)
-# 승인해야 슬롯 생성 가능
+### 5. 클래스 승인 (관리자)
 PATCH {{baseUrl}}/classes/{{classId}}/approve
 Content-Type: application/json
 Authorization: Bearer {{adminToken}}
 
-{}
 
-### 7. 클래스 반려 (관리자)
+### 6. 클래스 반려 (관리자)
 PATCH {{baseUrl}}/classes/{{classId}}/reject
 Content-Type: application/json
 Authorization: Bearer {{adminToken}}
@@ -126,14 +122,17 @@ Authorization: Bearer {{adminToken}}
   "rejectReason": "클래스 정보가 부족합니다"
 }
 
+### 7. 클래스 상세 조회
+GET {{baseUrl}}/classes/{{classId}}
+
 ### 8. 슬롯 생성 (판매자)
 POST {{baseUrl}}/classes/{{classId}}/slots
 Content-Type: application/json
 Authorization: Bearer {{sellerToken}}
 
 {
-  "date": "2026-02-18",
-  "hour": 14,
+  "date": "2026-02-25",
+  "hour": 8,
   "capacity": 15,
   "isOpen": true
 }
