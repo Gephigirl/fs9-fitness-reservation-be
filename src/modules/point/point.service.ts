@@ -71,7 +71,9 @@ export async function getMyPointHistory(
   userId: string,
   query: QueryMyPointHistoryInput,
 ): Promise<PaginationResponse<any>> {
-  const { page = 1, limit = 10, type } = query;
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 10);
+  const { type } = query;
   const skip = (page - 1) * limit;
 
   const where: Prisma.PointHistoryWhereInput = { userId };
@@ -146,7 +148,9 @@ export async function getSellerSettlement(
     throw new AppError(404, "센터 정보를 찾을 수 없습니다", "CENTER_NOT_FOUND");
   }
 
-  const { startDate, endDate } = getMonthRange(query.year, query.month);
+  const year = Number(query.year);
+  const month = Number(query.month);
+  const { startDate, endDate } = getMonthRange(year, month);
 
   // 2. 정산 요약 + 클래스별 매출 병렬 조회
   const [summary, byClass] = await Promise.all([
@@ -164,8 +168,8 @@ export async function getSellerSettlement(
 
   return {
     period: {
-      year: query.year,
-      month: query.month,
+      year,
+      month,
     },
     summary,
     byClass,
@@ -183,9 +187,11 @@ export async function getSellerTransactions(
     throw new AppError(404, "센터 정보를 찾을 수 없습니다", "CENTER_NOT_FOUND");
   }
 
-  const { startDate, endDate } = getMonthRange(query.year, query.month);
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
+  const year = Number(query.year);
+  const month = Number(query.month);
+  const { startDate, endDate } = getMonthRange(year, month);
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 20);
   const skip = (page - 1) * limit;
 
   const { items, total } = await pointRepository.getSettlementTransactions({
@@ -255,7 +261,9 @@ export async function adjustPoints(data: AdjustPointInput) {
 export async function getAdminPointHistory(
   query: QueryAdminPointHistoryInput,
 ): Promise<PaginationResponse<any>> {
-  const { page = 1, limit = 10, type, userId } = query;
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 10);
+  const { type, userId } = query;
   const skip = (page - 1) * limit;
 
   const where: Prisma.PointHistoryWhereInput = {};
