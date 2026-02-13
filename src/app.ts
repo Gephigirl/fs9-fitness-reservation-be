@@ -11,6 +11,7 @@ import { logger } from "./middlewares/logger.ts";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.ts";
 import authRouter from "./modules/auth/auth.route.ts";
 import pointRouter from "./modules/point/point.route.ts";
+import reviewRouter from "./modules/review/review.route.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +44,7 @@ app.use("/api/centers", centerRouter);
 app.use("/api/classes", classRouter);
 app.use("/api/reservations", reservationRouter);
 app.use("/api/points", pointRouter);
+app.use("/api/reviews", reviewRouter);
 
 
 // 에러핸들러

@@ -42,16 +42,11 @@ export async function createClass(
 }
 
 // 클래스 목록 조회
-
 export async function getClasses(
   query: QueryClassInput,
   userRole?: UserRole,
   userId?: string
-): Promise<
-  PaginationResponse<
-    Awaited<ReturnType<typeof classRepository.findManyClasses>>[0]
-  >
-> {
+) {
   const {
     category,
     level,
@@ -99,17 +94,34 @@ export async function getClasses(
 
   const skip = (page - 1) * limit;
 
-  const [classes, total] = await Promise.all([
-    classRepository.findManyClasses({ where, skip, take: limit }),
+  const [classes, totalCount] = await Promise.all([
+    classRepository.findManyClasses({
+      where,
+      skip,
+      take: limit,
+    }),
     classRepository.countClasses(where),
   ]);
 
+  const classList = classes.map((cls) => {
+    const reviewCount = cls._count.reviews;
+    const totalRating = cls.reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = reviewCount > 0 ? Number((totalRating / reviewCount).toFixed(1)) : 0;
+
+    const { reviews, _count, ...rest } = cls; 
+    return {
+      ...rest,
+      rating: averageRating,
+      reviewCount,
+    };
+  });
+
   return {
-    data: classes,
-    total,
+    data: classList,
+    total: totalCount,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: Math.ceil(totalCount / limit),
   };
 }
 

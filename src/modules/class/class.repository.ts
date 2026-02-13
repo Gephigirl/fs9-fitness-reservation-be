@@ -36,6 +36,11 @@ export async function findManyClasses(params: {
           address1: true,
         },
       },
+      reviews: {
+        select: {
+          rating: true,
+        },
+      },
       _count: {
         select: {
           reviews: true,
