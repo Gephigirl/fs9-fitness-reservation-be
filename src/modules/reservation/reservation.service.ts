@@ -1,5 +1,5 @@
 import prisma from "../../config/prisma.js";
-import { ReservationStatus, PointUsed, UserRole } from "@prisma/client";
+import { ReservationStatus, UserRole } from "@prisma/client";
 import type {
   CreateReservationInput,
   CancelReservationInput,
@@ -10,12 +10,13 @@ import type {
 import type { PaginationResponse } from "../../types/common.types.js";
 import { AppError } from "../../middlewares/errorHandler.js";
 import * as reservationRepository from "./reservation.repository.js";
+import * as pointService from "../point/point.service.js";
 
 // [고객] 결제 및 예약하기
 export async function createReservation(
   userId: string,
   data: CreateReservationInput,
-  now: Date = new Date()
+  now: Date = new Date(),
 ) {
   const slot = await reservationRepository.findSlotWithClass(data.slotId);
   if (!slot) {
@@ -34,7 +35,7 @@ export async function createReservation(
     throw new AppError(
       400,
       "승인된 클래스만 예약 가능합니다",
-      "CLASS_NOT_APPROVED"
+      "CLASS_NOT_APPROVED",
     );
   }
   const user = await reservationRepository.findUserWithPoint(userId);
@@ -46,7 +47,7 @@ export async function createReservation(
 
   if (data.userCouponId) {
     userCoupon = await reservationRepository.findUserCouponById(
-      data.userCouponId
+      data.userCouponId,
     );
 
     if (!userCoupon) {
@@ -66,7 +67,7 @@ export async function createReservation(
       couponDiscount = userCoupon.template.discountPoints;
     } else if (userCoupon.template.discountPercentage) {
       couponDiscount = Math.floor(
-        (slot.class.pricePoints * userCoupon.template.discountPercentage) / 100
+        (slot.class.pricePoints * userCoupon.template.discountPercentage) / 100,
       );
     }
   }
@@ -103,25 +104,13 @@ export async function createReservation(
     });
 
     // 유저 포인트 차감
-    await tx.user.update({
-      where: { id: userId },
-      data: {
-        pointBalance: {
-          decrement: paidPoints,
-        },
-      },
-    });
-
-    await tx.pointHistory.create({
-      data: {
-        userId,
-        type: PointUsed.USE,
-        amount: paidPoints,
-        balanceBefore: user.pointBalance,
-        balanceAfter: user.pointBalance - paidPoints,
-        reservationId: newReservation.id,
-      },
-    });
+    await pointService.usePoints(
+      tx,
+      userId,
+      paidPoints,
+      user.pointBalance,
+      newReservation.id,
+    );
 
     if (data.userCouponId) {
       await tx.userCoupon.update({
@@ -138,7 +127,7 @@ export async function createReservation(
 
 // [공통] 예약 목록 조회
 export async function getReservations(
-  query: QueryReservationInput
+  query: QueryReservationInput,
 ): Promise<PaginationResponse<any>> {
   const {
     userId,
@@ -232,7 +221,7 @@ export async function cancelReservation(
   reservationId: string,
   data: CancelReservationInput,
   canceledBy: UserRole,
-  now: Date = new Date()
+  now: Date = new Date(),
 ) {
   // 1. 예약 조회
   const reservation =
@@ -253,7 +242,7 @@ export async function cancelReservation(
     throw new AppError(
       400,
       "완료된 예약은 취소할 수 없습니다",
-      "ALREADY_COMPLETED"
+      "ALREADY_COMPLETED",
     );
   }
 
@@ -267,7 +256,7 @@ export async function cancelReservation(
     throw new AppError(
       400,
       "이미 시작된 예약은 취소할 수 없습니다",
-      "PAST_RESERVATION"
+      "PAST_RESERVATION",
     );
   }
 
@@ -285,26 +274,13 @@ export async function cancelReservation(
     });
 
     // 포인트 환불
-    await tx.user.update({
-      where: { id: reservation.userId },
-      data: {
-        pointBalance: {
-          increment: reservation.paidPoints,
-        },
-      },
-    });
-
-    // 포인트 내역 생성
-    await tx.pointHistory.create({
-      data: {
-        userId: reservation.userId,
-        type: PointUsed.REFUND,
-        amount: reservation.paidPoints,
-        balanceBefore: reservation.user.pointBalance,
-        balanceAfter: reservation.user.pointBalance + reservation.paidPoints,
-        reservationId: reservation.id,
-      },
-    });
+    await pointService.refundPoints(
+      tx,
+      reservation.userId,
+      reservation.paidPoints,
+      reservation.user.pointBalance,
+      reservation.id,
+    );
 
     return updated;
   });
@@ -317,7 +293,7 @@ export async function cancelReservation(
 // [판매자] 주간 내 클래스 슬롯 조회
 export async function getSellerSlots(
   sellerId: string,
-  query: QuerySellerSlotsInput
+  query: QuerySellerSlotsInput,
 ) {
   // 1. 판매자의 센터 조회
   const center = await reservationRepository.findCenterByOwnerId(sellerId);
@@ -351,7 +327,7 @@ export async function getSellerSlots(
 // [판매자] 내 슬롯에 대한 예약 조회
 export async function getSellerReservations(
   sellerId: string,
-  query: QueryReservationInput
+  query: QueryReservationInput,
 ): Promise<PaginationResponse<any>> {
   // 1. 판매자의 센터 조회
   const center = await reservationRepository.findCenterByOwnerId(sellerId);
@@ -397,11 +373,41 @@ export async function getSellerReservations(
   };
 }
 
+// [판매자] 예약 상세 조회 (결제정보 + 타임라인)
+export async function getSellerReservationDetail(
+  sellerId: string,
+  reservationId: string,
+) {
+  // 1. 판매자의 센터 조회
+  const center = await reservationRepository.findCenterByOwnerId(sellerId);
+  if (!center) {
+    throw new AppError(404, "센터 정보를 찾을 수 없습니다", "CENTER_NOT_FOUND");
+  }
+
+  // 2. 예약 상세 조회
+  const reservation =
+    await reservationRepository.findSellerReservationDetail(reservationId);
+  if (!reservation) {
+    throw new AppError(404, "예약을 찾을 수 없습니다", "RESERVATION_NOT_FOUND");
+  }
+
+  // 3. 센터 소유자 확인
+  if (reservation.class.center.ownerId !== sellerId) {
+    throw new AppError(
+      403,
+      "본인 센터의 예약만 조회할 수 있습니다",
+      "FORBIDDEN",
+    );
+  }
+
+  return reservation;
+}
+
 // [판매자] 특정 유저 예약 취소
 export async function cancelReservationBySeller(
   sellerId: string,
   reservationId: string,
-  data: CancelReservationInput
+  data: CancelReservationInput,
 ) {
   // 1. 예약 조회
   const reservation =
@@ -424,7 +430,7 @@ export async function cancelReservationBySeller(
 // [판매자] 클래스 수정/삭제시 예약 자동 취소 및 환불
 export async function cancelReservationsByClassChange(
   classId: string,
-  reason: string
+  reason: string,
 ) {
   // 1. 해당 클래스의 모든 미래 BOOKED 예약 조회
   const reservations =
@@ -451,26 +457,13 @@ export async function cancelReservationsByClassChange(
       });
 
       // 포인트 환불
-      await tx.user.update({
-        where: { id: reservation.userId },
-        data: {
-          pointBalance: {
-            increment: reservation.paidPoints,
-          },
-        },
-      });
-
-      // 포인트 내역 생성
-      await tx.pointHistory.create({
-        data: {
-          userId: reservation.userId,
-          type: PointUsed.REFUND,
-          amount: reservation.paidPoints,
-          balanceBefore: reservation.user.pointBalance,
-          balanceAfter: reservation.user.pointBalance + reservation.paidPoints,
-          reservationId: reservation.id,
-        },
-      });
+      await pointService.refundPoints(
+        tx,
+        reservation.userId,
+        reservation.paidPoints,
+        reservation.user.pointBalance,
+        reservation.id,
+      );
     }
   });
 
@@ -481,7 +474,7 @@ export async function cancelReservationsByClassChange(
 // [판매자] 슬롯 삭제시 예약 자동 취소 및 환불
 export async function cancelReservationsBySlotChange(
   slotId: string,
-  reason: string
+  reason: string,
 ) {
   // 1. 해당 슬롯의 BOOKED 예약 조회
   const reservations =
@@ -508,26 +501,13 @@ export async function cancelReservationsBySlotChange(
       });
 
       // 포인트 환불
-      await tx.user.update({
-        where: { id: reservation.userId },
-        data: {
-          pointBalance: {
-            increment: reservation.paidPoints,
-          },
-        },
-      });
-
-      // 포인트 내역 생성
-      await tx.pointHistory.create({
-        data: {
-          userId: reservation.userId,
-          type: PointUsed.REFUND,
-          amount: reservation.paidPoints,
-          balanceBefore: reservation.user.pointBalance,
-          balanceAfter: reservation.user.pointBalance + reservation.paidPoints,
-          reservationId: reservation.id,
-        },
-      });
+      await pointService.refundPoints(
+        tx,
+        reservation.userId,
+        reservation.paidPoints,
+        reservation.user.pointBalance,
+        reservation.id,
+      );
     }
   });
 
@@ -539,7 +519,7 @@ export async function cancelReservationsBySlotChange(
 export async function completeReservation(
   sellerId: string,
   reservationId: string,
-  now: Date = new Date()
+  now: Date = new Date(),
 ) {
   // 1. 예약 조회
   const reservation =
@@ -565,7 +545,7 @@ export async function completeReservation(
     throw new AppError(
       400,
       "수업 종료 후 완료 처리가 가능합니다",
-      "CLASS_NOT_ENDED"
+      "CLASS_NOT_ENDED",
     );
   }
 

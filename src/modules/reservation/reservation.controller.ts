@@ -149,6 +149,32 @@ export async function getSellerReservationsHandler(
   }
 }
 
+// GET /seller/reservations/:id
+// [판매자] 예약 상세 조회 (결제정보 + 타임라인)
+export async function getSellerReservationDetailHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const authReq = req as AuthRequest;
+    if (!authReq.user) {
+      throw new AppError(401, "인증이 필요합니다", "AUTHENTICATION_REQUIRED");
+    }
+    if (authReq.user.role !== UserRole.SELLER) {
+      throw new AppError(403, "판매자만 접근 가능합니다", "FORBIDDEN");
+    }
+    const id = (req.params as { id: string }).id;
+    const reservation = await reservationService.getSellerReservationDetail(
+      authReq.user.id,
+      id
+    );
+    res.status(200).json({ success: true, data: reservation });
+  } catch (error) {
+    next(error);
+  }
+}
+
 // PATCH /seller/reservations/:id/cancel 
 // [판매자] 특정 유저 예약 취소
 export async function cancelReservationBySellerHandler(

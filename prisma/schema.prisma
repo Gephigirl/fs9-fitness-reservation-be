@@ -66,6 +66,7 @@ model Center {
   owner   User   @relation(fields: [ownerId], references: [id])
 
   name         String // 센터명
+  phone        String? // 센터 대표번호
   address1     String // 도로명 주소
   address2     String? // 상세 주소
   introduction String? // 센터 소개
@@ -111,6 +112,7 @@ model Class {
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
   @@index([centerId])
   @@index([status])
@@ -133,6 +135,7 @@ model ClassSlot {
   reservations Reservation[] // 이 슬롯 예약들
 
   createdAt DateTime @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
 
   @@unique([classId, startAt])
   @@index([startAt])

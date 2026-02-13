@@ -1,0 +1,101 @@
+### 변수 설정
+@baseUrl = http://localhost:{{$dotenv PORT}}/api
+@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbGlwY3UydDAwMDJ2ODh0eG40b3VidmgiLCJlbWFpbCI6ImN1c3RvbWVyQHRlc3QuY29tIiwicm9sZSI6IkNVU1RPTUVSIiwiaWF0IjoxNzcwODU1MDIwLCJleHAiOjE3NzA5NDE0MjB9.K5ELc3ZMYm6EZGZo56S8fXV1axaGMBO70vtXgGNoFMI
+@sellerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbGlwY3UwZTAwMDB2ODh0bmhxb2IxcmIiLCJlbWFpbCI6InNlbGxlckB0ZXN0LmNvbSIsInJvbGUiOiJTRUxMRVIiLCJpYXQiOjE3NzA4NTUwMjAsImV4cCI6MTc3MDk0MTQyMH0.xItKMKPiyS_4Ki6gwMhK3lpsWc__BnzHH8S0zhMIJQQ  
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbGlwY3UxcDAwMDF2ODh0a2ZyeDJmbnoiLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzcwODU1MDIwLCJleHAiOjE3NzA5NDE0MjB9.zKmNMjkQjp8fnSxEo-9Gmb2CiBGkVkKO6eM-u6HC7Ig
+
+@userId = {{profile.response.body.data.id}}
+
+### 0. [공통] 내 정보 조회 (ID 확인용)
+# @name profile
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{customerToken}}
+
+### 1. [고객] 포인트 조회
+GET {{baseUrl}}/points/me
+Authorization: Bearer {{customerToken}}
+
+### 2. [고객] 포인트 충전 (10,000P)
+POST {{baseUrl}}/points/charge
+Content-Type: application/json
+Authorization: Bearer {{customerToken}}
+
+{
+  "amount": 10000,
+  "paymentKey": "test_payment_key_{{$datetime iso8601}}",
+  "orderId": "test_order_id_{{$datetime iso8601}}"
+}
+
+### 3. [고객] 포인트 내역 조회
+GET {{baseUrl}}/points/me/history?page=1&limit=10
+Authorization: Bearer {{customerToken}}
+
+### 4. [고객] 포인트 내역 조회 (충전만)
+GET {{baseUrl}}/points/me/history?type=CHARGE
+Authorization: Bearer {{customerToken}}
+
+### 5. [관리자] 포인트 지급 
+
+POST {{baseUrl}}/points/admin/adjust
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "userId": "{{userId}}",
+  "amount": 5000,
+  "memo": "이벤트 참여 보상"
+}
+
+### 6. [관리자] 포인트 차감 
+POST {{baseUrl}}/points/admin/adjust
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "userId": "{{userId}}",
+  "amount": -1000,
+  "memo": "관리자 차감 테스트"
+}
+
+### 7. [관리자] 전체 포인트 내역 조회
+GET {{baseUrl}}/points/admin/history?page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+### 8. [판매자] 매출 정산 요약 (2026년 2월)
+GET {{baseUrl}}/points/seller/settlement?year=2026&month=2
+Authorization: Bearer {{sellerToken}}
+
+### 9. [판매자] 거래 내역 조회
+
+### 10. [고객] 예약 생성 (환불 테스트용)
+# class.http에서 생성한 slotId 필요
+
+@classId = cmlj8jlck0008vg8twpvj5j36
+@slotId = cmlj8jycc0009vg8teje5g20l
+@reservationId = cmlj8idjz0005vg8t8d9kwz0f
+
+POST {{baseUrl}}/reservations
+Content-Type: application/json
+Authorization: Bearer {{customerToken}}
+
+{
+  "slotId": "{{slotId}}"
+}
+
+### 11. [고객] 예약 취소 (환불 발생)
+# 위 요청에서 생성된 reservationId 필요
+PATCH {{baseUrl}}/reservations/{{reservationId}}/cancel
+Content-Type: application/json
+Authorization: Bearer {{customerToken}}
+
+{
+  "cancelNote": "단순 변심"
+}
+
+### 12. [판매자] 클래스 삭제 (환불 발생)
+DELETE {{baseUrl}}/classes/{{classId}}
+Authorization: Bearer {{sellerToken}}
+
+### 13. [고객] 포인트 내역 조회 (환불만)
+GET {{baseUrl}}/points/me/history?type=REFUND
+Authorization: Bearer {{customerToken}}
