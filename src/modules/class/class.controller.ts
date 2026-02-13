@@ -186,7 +186,11 @@ export async function deleteClassHandler(
       throw new AppError(400, "클래스 ID가 필요합니다", "MISSING_CLASS_ID");
     }
 
-    const result = await classService.deleteClass(authReq.user.id, id);
+    const result = await classService.deleteClass(
+      authReq.user.id,
+      id,
+      authReq.user.role
+    );
 
     res.status(200).json({
       success: true,
