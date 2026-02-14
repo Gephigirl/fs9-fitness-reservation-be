@@ -1,15 +1,16 @@
 ### 변수 설정
 @baseUrl = http://localhost:{{$dotenv PORT}}/api
 
-### 시딩 후 로그 보고 복붙
-@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbGlwY3UydDAwMDJ2ODh0eG40b3VidmgiLCJlbWFpbCI6ImN1c3RvbWVyQHRlc3QuY29tIiwicm9sZSI6IkNVU1RPTUVSIiwiaWF0IjoxNzcwODU1MDIwLCJleHAiOjE3NzA5NDE0MjB9.K5ELc3ZMYm6EZGZo56S8fXV1axaGMBO70vtXgGNoFMI
-@sellerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbGlwY3UwZTAwMDB2ODh0bmhxb2IxcmIiLCJlbWFpbCI6InNlbGxlckB0ZXN0LmNvbSIsInJvbGUiOiJTRUxMRVIiLCJpYXQiOjE3NzA4NTUwMjAsImV4cCI6MTc3MDk0MTQyMH0.xItKMKPiyS_4Ki6gwMhK3lpsWc__BnzHH8S0zhMIJQQ  
-@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtbGlwY3UxcDAwMDF2ODh0a2ZyeDJmbnoiLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzcwODU1MDIwLCJleHAiOjE3NzA5NDE0MjB9.zKmNMjkQjp8fnSxEo-9Gmb2CiBGkVkKO6eM-u6HC7Ig
+@customerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3QtY3VzdG9tZXItaWQtMDEiLCJlbWFpbCI6ImN1c3RvbWVyQHRlc3QuY29tIiwicm9sZSI6IkNVU1RPTUVSIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjIwNTEwNDk2MDB9.-ZzfFPp3z0E4l8iUPKJpgcqOHss0ZrEBCDTe-o_Sq5w
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3QtYWRtaW4taWQtMDEiLCJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjIwNTEwNDk2MDB9.sD-JpVjXOUG4buIUZHoT5s8Xc6bx748qVnx0eXyTcEg
+@sellerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3Qtc2VsbGVyLWlkLTAxIiwiZW1haWwiOiJzZWxsZXJAdGVzdC5jb20iLCJyb2xlIjoiU0VMTEVSIiwiaWF0IjoxNzM1Njg5NjAwLCJleHAiOjIwNTEwNDk2MDB9.b72ElQl5zvPQjAf-hhgvQNtv422HtcPjvT5qQ3EPeM0
+@sellerToken2 = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InRlc3Qtc2VsbGVyLWlkLTAyIiwiZW1haWwiOiJzZWxsZXIyQHRlc3QuY29tIiwicm9sZSI6IlNFTExFUiIsImlhdCI6MTczNTY4OTYwMCwiZXhwIjoyMDUxMDQ5NjAwfQ.kzXCbd9oz4ffjwwYX312XC-xdsd4WlUqla4fnOB7jUI
 
-@classId = cmlj8jlck0008vg8twpvj5j36
-@slotId = cmlj8jycc0009vg8teje5g20l
+@classId = {{createClass.response.body.data.id}}
+@slotId = {{createSlot.response.body.data.id}}
 
 ### 1. 클래스 생성 (판매자)
+# @name createClass
 POST {{baseUrl}}/classes
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
 Authorization: Bearer {{sellerToken}}
@@ -42,21 +43,6 @@ Content-Disposition: form-data; name="pricePoints"
 Content-Disposition: form-data; name="capacity"
 
 20
-------WebKitFormBoundary
-Content-Disposition: form-data; name="images"; filename="image1.png"
-Content-Type: image/png
-
-< test/image1.png
-------WebKitFormBoundary
-Content-Disposition: form-data; name="images"; filename="image2.png"
-Content-Type: image/png
-
-< test/image2.png
-------WebKitFormBoundary
-Content-Disposition: form-data; name="images"; filename="image3.png"
-Content-Type: image/png
-
-< test/image3.png
 ------WebKitFormBoundary--
 
 
@@ -87,24 +73,6 @@ Content-Disposition: form-data; name="title"
 Content-Disposition: form-data; name="description"
 
 설명이 수정되었습니다
-------WebKitFormBoundary
-Content-Disposition: form-data; name="capacity"
-
-25
-------WebKitFormBoundary
-Content-Disposition: form-data; name="pricePoints"
-
-12000
-------WebKitFormBoundary
-Content-Disposition: form-data; name="images"; filename="image1.png"
-Content-Type: image/png
-
-< test/image1.png
-------WebKitFormBoundary
-Content-Disposition: form-data; name="images"; filename="image2.png"
-Content-Type: image/png
-
-< test/image2.png
 ------WebKitFormBoundary--
 
 ### 5. 클래스 승인 (관리자)
@@ -126,12 +94,13 @@ Authorization: Bearer {{adminToken}}
 GET {{baseUrl}}/classes/{{classId}}
 
 ### 8. 슬롯 생성 (판매자)
+# @name createSlot
 POST {{baseUrl}}/classes/{{classId}}/slots
 Content-Type: application/json
 Authorization: Bearer {{sellerToken}}
 
 {
-  "date": "2026-02-25",
+  "date": "2026-03-26",
   "hour": 8,
   "capacity": 15,
   "isOpen": true
@@ -150,6 +119,29 @@ Authorization: Bearer {{sellerToken}}
 DELETE {{baseUrl}}/classes/{{classId}}/slots/{{slotId}}
 Authorization: Bearer {{sellerToken}}
 
-### 11. 클래스 삭제 (판매자)
+### 11. 클래스 삭제 (본인 - 판매자)
 DELETE {{baseUrl}}/classes/{{classId}}
 Authorization: Bearer {{sellerToken}}
+
+### 12. 클래스 삭제 (관리자)
+# 관리자는 모든 클래스 삭제 가능해야 함
+DELETE {{baseUrl}}/classes/{{classId}}
+Authorization: Bearer {{adminToken}}
+
+### 13. 클래스 삭제 - 권한 없음 (다른 판매자)
+# 다른 판매자가 생성한 클래스 삭제 시도 (403 Forbidden 예상)
+DELETE {{baseUrl}}/classes/{{classId}}
+Authorization: Bearer {{sellerToken2}}
+
+### 14. 슬롯 생성 - 권한 없음 (다른 판매자)
+POST {{baseUrl}}/classes/{{classId}}/slots
+Content-Type: application/json
+Authorization: Bearer {{sellerToken2}}
+
+{
+  "date": "2026-03-01",
+  "hour": 10,
+  "capacity": 10,
+  "isOpen": true
+}
+

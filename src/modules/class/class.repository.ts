@@ -336,6 +336,18 @@ export async function deleteSlot(slotId: string) {
   });
 }
 
+export async function deleteSlotsByClassId(classId: string) {
+  return prisma.classSlot.updateMany({
+    where: {
+      classId,
+      deletedAt: null,
+    },
+    data: {
+      deletedAt: new Date(),
+    },
+  });
+}
+
 // 클래스의 모든 예약 취소 
 export async function cancelAllReservationsForClass(classId: string) {
   return prisma.reservation.updateMany({
