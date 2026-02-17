@@ -32,6 +32,27 @@ export const uploadClassImages = (req: Request, res: Response, next: NextFunctio
   ])(req, res, next);
 };
 
+// 프로필 이미지 업로드 설정
+const profileUpload = multer({
+  storage: createStorage(UPLOAD_PATHS.PROFILE),
+  fileFilter: imageFileFilter,
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+    files: 1,
+  },
+});
+
+// 프로필 이미지 업로드 미들웨어
+export const uploadProfileImage = (req: Request, res: Response, next: NextFunction) => {
+  const contentType = req.headers['content-type'] || '';
+  
+  if (!contentType.includes('multipart/form-data')) {
+    return next();
+  }
+  
+  profileUpload.single('profileImage')(req, res, next);
+};
+
 // multer 에러 핸들링 미들웨어
 export const handleUploadError = (
   error: any,
