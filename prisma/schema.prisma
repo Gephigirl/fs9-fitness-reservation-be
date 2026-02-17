@@ -43,6 +43,8 @@ model User {
   profileImgUrl String? @map("profile_img_url") // 프로필 이미지
   introduction  String? // 자기소개
 
+  note String? // 메모
+
   pointBalance Int @default(0) @map("point_balance") // 보유 포인트(잔액)
 
   center Center?
