@@ -66,6 +66,15 @@ export async function getUserStats() {
 }
 
 
+// [관리자] 회원 메모 수정
+export async function updateUserNote(userId: string, note: string | null) {
+  const existing = await userRepository.findUserById(userId);
+  if (!existing) {
+    throw new AppError(404, "회원을 찾을 수 없습니다", "USER_NOT_FOUND");
+  }
+  return userRepository.updateUserNote(userId, note);
+}
+
 // 내 프로필 수정
 export async function updateProfile(
   userId: string,

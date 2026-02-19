@@ -22,3 +22,11 @@ export const updateProfileSchema = z.object({
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+// [관리자] 회원 메모 수정
+export const patchUserNoteSchema = z.object({
+  body: z.object({
+    note: z.string().max(500).nullable().optional(),
+  }),
+});
+export type PatchUserNoteSchema = z.infer<typeof patchUserNoteSchema>;

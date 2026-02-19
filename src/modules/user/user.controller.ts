@@ -88,6 +88,41 @@ export async function getUserByIdHandler(
   }
 }
 
+// PATCH /users/:id/note - 회원 메모만 수정 (관리자 전용)
+export async function patchUserNoteHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const authReq = req as AuthRequest;
+    const { id } = req.params;
+    const { note } = req.body as { note?: string | null };
+
+    if (!authReq.user) {
+      throw new AppError(401, "인증이 필요합니다", "AUTHENTICATION_REQUIRED");
+    }
+    if (authReq.user.role !== UserRole.ADMIN) {
+      throw new AppError(403, "권한이 없습니다", "FORBIDDEN");
+    }
+    if (!id || typeof id !== "string") {
+      throw new AppError(400, "회원 ID가 필요합니다", "MISSING_USER_ID");
+    }
+    if (note === undefined) {
+      throw new AppError(400, "메모 값을 입력해주세요", "MISSING_NOTE");
+    }
+
+    const data = await userService.updateUserNote(id, note);
+
+    res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 // multer 파일 타입
 interface MulterFile {
   fieldname: string;

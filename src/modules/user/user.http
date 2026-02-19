@@ -19,7 +19,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "customer@test.com",
+  "email": "customer1@test.com",
   "password": "test1234"
 }
 
@@ -33,7 +33,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "seller@test.com",
+  "email": "seller1@test.com",
   "password": "test1234"
 }
 
@@ -79,8 +79,6 @@ Authorization: Bearer {{adminToken}}
 
 ### ========== 회원 상세 ==========
 
-### ========== 회원 상세 ==========
-
 ### 12. 회원 상세 조회 (Admin -> User)
 GET {{baseUrl}}/users/{{customerId}}
 Authorization: Bearer {{adminToken}}
@@ -95,6 +93,26 @@ Authorization: Bearer {{customerToken}}
 
 ### 15. 회원 상세 조회 (비로그인 - 401 Unauthorized)
 GET {{baseUrl}}/users/{{customerId}}
+
+### ========== 회원 메모 (관리자) ==========
+
+### 16. 회원 메모 수정 (관리자)
+PATCH {{baseUrl}}/users/{{customerId}}/note
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "note": "매크로 의심"
+}
+
+### 17. 회원 메모 삭제 (null로 초기화)
+PATCH {{baseUrl}}/users/{{customerId}}/note
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "note": null
+}
 
 ### ========== 프로필 수정 ==========
 
@@ -113,7 +131,7 @@ Authorization: Bearer {{customerToken}}
 Content-Type: application/json
 
 {
-  "phone": "01011112222"
+  "phone": "01011118422"
 }
 
 ### 15. 프로필 수정 - 비밀번호 변경 
@@ -141,7 +159,7 @@ Content-Type: application/json
 
 {
   "nickname": "김트레이너",
-  "phone": "01033332444",
+  "phone": "01033532444",
   "introduction": "전문 트레이너입니다."
 }
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { getUsersHandler, getUserStatsHandler, getUserByIdHandler, updateProfileHandler } from "./user.controller.ts";
+import { getUsersHandler, getUserStatsHandler, getUserByIdHandler, updateProfileHandler, patchUserNoteHandler } from "./user.controller.ts";
 import { validate } from "../../middlewares/validate.ts";
-import { getUsersSchema, updateProfileSchema } from "./user.validation.ts";
+import { getUsersSchema, updateProfileSchema, patchUserNoteSchema } from "./user.validation.ts";
 import { authenticate, requireRole } from "../../middlewares/auth.ts";
 import { uploadProfileImage } from "../../middlewares/upload.ts";
 import { UserRole } from "@prisma/client";
@@ -29,7 +29,16 @@ router.get(
   getUsersHandler
 );
 
-// GET /users/:id - 회원 상세 조회 (ADMIN)
+// GET /users/:id - 회원 상세 조회 (ADMIN or 본인)
 router.get("/:id", authenticate, getUserByIdHandler);
+
+// PATCH /users/:id/note - 회원 메모만 수정 (ADMIN)
+router.patch(
+  "/:id/note",
+  authenticate,
+  requireRole(UserRole.ADMIN),
+  validate(patchUserNoteSchema),
+  patchUserNoteHandler,
+);
 
 export default router;

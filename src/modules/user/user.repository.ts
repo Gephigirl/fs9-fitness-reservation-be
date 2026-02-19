@@ -116,3 +116,13 @@ export async function updateUser(
     },
   });
 }
+
+// [관리자] 회원 메모
+export async function updateUserNote(userId: string, note: string | null) {
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { note },
+    select: { note: true },
+  });
+  return updated;
+}
