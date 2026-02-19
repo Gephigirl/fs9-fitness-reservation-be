@@ -54,6 +54,8 @@ model User {
   userCoupons   UserCoupon[] // 쿠폰함
   notifications Notification[] // 알림
   pointHistory  PointHistory[] // 포인트 내역
+  
+  issuedCoupons CouponTemplate[] @relation("IssuedCoupons") // 내가 생성한 쿠폰 템플릿
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -225,11 +227,15 @@ model CouponTemplate {
   discountPercentage Int?      @map("discount_percentage") // 할인 퍼센트
   expiresAt          DateTime? @map("expires_at") // 만료일(선택)
 
+  issuerId String @map("issuer_id") // 생성자(발급자) ID
+  issuer   User   @relation("IssuedCoupons", fields: [issuerId], references: [id])
+
   createdAt DateTime @default(now()) @map("created_at")
 
   userCoupons UserCoupon[] // 이 템플릿으로 발급된 유저 쿠폰들
 
   @@index([centerId])
+  @@index([issuerId])
   @@map("coupon_templates")
 }
 
@@ -239,8 +245,14 @@ model UserCoupon {
   userId String @map("user_id") // 쿠폰 소유자
   user   User   @relation(fields: [userId], references: [id])
 
-  templateId String         @map("template_id") // 어떤 쿠폰인지
-  template   CouponTemplate @relation(fields: [templateId], references: [id])
+  templateId String?         @map("template_id") // 발급 출처 템플릿(참조용, 삭제되어도 쿠폰 유효)
+  template   CouponTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  // 발급 시 템플릿에서 복사한 스냅샷 - 템플릿 삭제 후에도 쿠폰 독립 유지
+  couponName         String    @map("coupon_name")          // 쿠폰 이름
+  discountPoints     Int?      @map("discount_points")      // 할인 포인트
+  discountPercentage Int?      @map("discount_percentage")  // 할인 퍼센트
+  expiresAt          DateTime? @map("expires_at")           // 만료일
 
   issuedAt DateTime  @default(now()) @map("issued_at") // 발급일
   usedAt   DateTime? @map("used_at") // 사용일(미사용 null)
