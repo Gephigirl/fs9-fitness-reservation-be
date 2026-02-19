@@ -8,6 +8,16 @@ import {
   queryReviewSchema,
 } from "./review.validation.ts";
 
+import { env } from "../../config/env.ts";
+
+// 리뷰 이미지 URL 생성 헬퍼
+function getReviewImageUrls(req: Request) {
+  const files = req.files as any[];
+  if (!files || !Array.isArray(files)) return [];
+  const baseUrl = `${env.SERVER_URL}/uploads/reviews`;
+  return files.map((file) => `${baseUrl}/${file.filename}`);
+}
+
 // [고객] 리뷰 생성 핸들러
 export async function createReviewHandler(
   req: Request,
@@ -21,7 +31,13 @@ export async function createReviewHandler(
       throw new AppError(401, "인증이 필요합니다", "UNAUTHORIZED");
     }
 
-    const input = createReviewSchema.parse(req.body);
+    const imgUrls = getReviewImageUrls(req);
+    const body = { ...req.body };
+    if (imgUrls.length > 0) {
+      body.imgUrls = imgUrls;
+    }
+
+    const input = createReviewSchema.parse(body);
 
     const review = await reviewService.createReview(userId, input);
 
@@ -108,7 +124,13 @@ export async function updateReviewHandler(
       throw new AppError(400, "리뷰 ID는 필수입니다", "INVALID_INPUT");
     }
 
-    const input = updateReviewSchema.parse(req.body);
+    const imgUrls = getReviewImageUrls(req);
+    const body = { ...req.body };
+    if (imgUrls.length > 0) {
+      body.imgUrls = imgUrls;
+    }
+
+    const input = updateReviewSchema.parse(body);
 
     const review = await reviewService.updateReview(
       userId,

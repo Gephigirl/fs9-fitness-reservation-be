@@ -8,12 +8,15 @@ import {
   updateReviewSchema,
 } from "./review.validation.ts";
 
+import { uploadReviewImages } from "../../middlewares/upload.ts";
+
 const router = Router();
 
 // 리뷰 생성
 router.post(
   "/",
   authenticate,
+  uploadReviewImages,
   validate(createReviewSchema),
   reviewController.createReviewHandler
 );
@@ -36,6 +39,7 @@ router.get(
 router.patch(
   "/:reviewId",
   authenticate,
+  uploadReviewImages,
   validate(updateReviewSchema),
   reviewController.updateReviewHandler
 );

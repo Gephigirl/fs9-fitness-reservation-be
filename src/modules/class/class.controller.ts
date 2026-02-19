@@ -20,12 +20,14 @@ interface MulterFile {
 // 업로드된 파일을 URL로 변환
 // 첫 번째 이미지가 대표 이미지
 function getFileUrls(req: Request) {
-  const files = (
-    req as Request & { files?: { [fieldname: string]: MulterFile[] } }
-  ).files;
+  const files = req.files as MulterFile[] | undefined;
   const baseUrl = `${env.SERVER_URL}/uploads/classes`;
-  const imgUrls =
-    files?.images?.map((file) => `${baseUrl}/${file.filename}`) || [];
+  
+  if (!files || !Array.isArray(files)) {
+      return { bannerUrl: undefined, imgUrls: [] };
+  }
+
+  const imgUrls = files.map((file) => `${baseUrl}/${file.filename}`);
   const bannerUrl = imgUrls.length > 0 ? imgUrls[0] : undefined;
 
   return { bannerUrl, imgUrls };
