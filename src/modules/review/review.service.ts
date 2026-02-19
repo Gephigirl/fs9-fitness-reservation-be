@@ -1,17 +1,13 @@
 import { Prisma } from "@prisma/client";
-import * as reviewRepository from "./review.repository.js";
-import * as reservationRepository from "../reservation/reservation.repository.js";
+import * as reviewRepository from "./review.repository.ts";
+import * as reservationRepository from "../reservation/reservation.repository.ts";
 import { AppError } from "../../middlewares/errorHandler.ts";
+import type { CreateReviewInput, UpdateReviewInput } from "./review.validation.ts";
 
 // [고객] 리뷰 생성
 export async function createReview(
   userId: string,
-  data: {
-    reservationId: string;
-    rating: number;
-    content?: string;
-    imgUrls?: string[];
-  }
+  data: CreateReviewInput
 ) {
   const reservation = await reservationRepository.findReservationById(
     data.reservationId
@@ -105,14 +101,11 @@ export async function getMyReviewByReservationId(
 }
 
 // [고객] 리뷰 수정
+// [고객] 리뷰 수정
 export async function updateReview(
   userId: string,
   reviewId: string,
-  data: {
-    rating?: number;
-    content?: string;
-    imgUrls?: string[];
-  }
+  data: UpdateReviewInput
 ) {
   const review = await reviewRepository.findReviewById(reviewId);
   if (!review) {

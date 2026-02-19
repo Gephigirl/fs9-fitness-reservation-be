@@ -1,7 +1,12 @@
 import type { Request, Response, NextFunction } from "express";
-import * as reviewService from "./review.service.js";
+import * as reviewService from "./review.service.ts";
 import type { AuthRequest } from "../../middlewares/auth.ts";
 import { AppError } from "../../middlewares/errorHandler.ts";
+import {
+  createReviewSchema,
+  updateReviewSchema,
+  queryReviewSchema,
+} from "./review.validation.ts";
 
 // [고객] 리뷰 생성 핸들러
 export async function createReviewHandler(
@@ -16,14 +21,9 @@ export async function createReviewHandler(
       throw new AppError(401, "인증이 필요합니다", "UNAUTHORIZED");
     }
 
-    const { reservationId, rating, content, imgUrls } = req.body;
+    const input = createReviewSchema.parse(req.body);
 
-    const review = await reviewService.createReview(userId, {
-      reservationId,
-      rating: Number(rating),
-      content,
-      ...(imgUrls ? { imgUrls: imgUrls as string[] } : {}),
-    });
+    const review = await reviewService.createReview(userId, input);
 
     res.status(201).json({ success: true, data: review });
   } catch (error) {
@@ -39,8 +39,11 @@ export async function getReviewsByCenterHandler(
 ) {
   try {
     const { centerId } = req.params;
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
+    
+    // Query String 파싱
+    const query = queryReviewSchema.parse(req.query);
+    const page = query.page;
+    const limit = query.limit;
 
     if (!centerId) {
       throw new AppError(400, "센터 ID는 필수입니다", "INVALID_INPUT");
@@ -105,16 +108,12 @@ export async function updateReviewHandler(
       throw new AppError(400, "리뷰 ID는 필수입니다", "INVALID_INPUT");
     }
 
-    const { rating, content, imgUrls } = req.body;
+    const input = updateReviewSchema.parse(req.body);
 
     const review = await reviewService.updateReview(
       userId,
       reviewId as string,
-      {
-        ...(rating !== undefined && { rating: Number(rating) }),
-        ...(content !== undefined && { content }),
-        ...(imgUrls !== undefined && { imgUrls: imgUrls as string[] }),
-      }
+      input
     );
 
     res.status(200).json({ success: true, data: review });
