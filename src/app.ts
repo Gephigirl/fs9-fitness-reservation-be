@@ -13,6 +13,7 @@ import authRouter from "./modules/auth/auth.route.ts";
 import pointRouter from "./modules/point/point.route.ts";
 import reviewRouter from "./modules/review/review.route.ts";
 import userRouter from "./modules/user/user.route.ts";
+import couponRouter from "./modules/coupon/coupon.route.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,7 @@ app.use("/api/reservations", reservationRouter);
 app.use("/api/points", pointRouter);
 app.use("/api/reviews", reviewRouter);
 app.use("/api/users", userRouter);
+app.use("/api/coupons", couponRouter);
 
 
 // 에러핸들러
