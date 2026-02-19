@@ -1,4 +1,4 @@
-import prisma from "../../config/prisma.js";
+import prisma from "../../config/prisma.ts";
 import { ReservationStatus, UserRole } from "@prisma/client";
 import type {
   CreateReservationInput,
@@ -6,11 +6,11 @@ import type {
   QueryReservationInput,
   QuerySellerSlotsInput,
   QueryReservationStatsInput,
-} from "./reservation.validation.js";
-import type { PaginationResponse } from "../../types/common.types.js";
-import { AppError } from "../../middlewares/errorHandler.js";
-import * as reservationRepository from "./reservation.repository.js";
-import * as pointService from "../point/point.service.js";
+} from "./reservation.validation.ts";
+import type { PaginationResponse } from "../../types/common.types.ts";
+import { AppError } from "../../middlewares/errorHandler.ts";
+import * as reservationRepository from "./reservation.repository.ts";
+import * as pointService from "../point/point.service.ts";
 
 // [고객] 결제 및 예약하기
 export async function createReservation(
@@ -28,7 +28,8 @@ export async function createReservation(
   if (slot.startAt < now) {
     throw new AppError(400, "지난 슬롯은 예약할 수 없습니다", "PAST_SLOT");
   }
-  if (slot._count.reservations >= slot.capacity) {
+
+  if (slot.currentReservation >= slot.capacity) {
     throw new AppError(400, "정원이 마감되었습니다", "SLOT_FULL");
   }
   if (slot.class.status !== "APPROVED") {
@@ -58,16 +59,15 @@ export async function createReservation(
       throw new AppError(400, "이미 사용된 쿠폰입니다", "COUPON_USED");
     }
 
-    if (userCoupon.template.expiresAt && userCoupon.template.expiresAt < now) {
+    if (userCoupon.expiresAt && userCoupon.expiresAt < now) {
       throw new AppError(400, "만료된 쿠폰입니다", "COUPON_EXPIRED");
     }
 
-    // 할인 계산
-    if (userCoupon.template.discountPoints) {
-      couponDiscount = userCoupon.template.discountPoints;
-    } else if (userCoupon.template.discountPercentage) {
+    if (userCoupon.discountPoints) {
+      couponDiscount = userCoupon.discountPoints;
+    } else if (userCoupon.discountPercentage) {
       couponDiscount = Math.floor(
-        (slot.class.pricePoints * userCoupon.template.discountPercentage) / 100,
+        (slot.class.pricePoints * userCoupon.discountPercentage) / 100,
       );
     }
   }
@@ -80,6 +80,16 @@ export async function createReservation(
   }
 
   const reservation = await prisma.$transaction(async (tx) => {
+    const updatedSlot =
+      await reservationRepository.increaseSlotCurrentReservation(
+        tx,
+        data.slotId,
+      );
+
+    if (updatedSlot.currentReservation > updatedSlot.capacity) {
+      throw new AppError(400, "정원이 마감되었습니다", "SLOT_FULL");
+    }
+
     const newReservation = await tx.reservation.create({
       data: {
         userId,
@@ -103,7 +113,6 @@ export async function createReservation(
       },
     });
 
-    // 유저 포인트 차감
     await pointService.usePoints(
       tx,
       userId,
@@ -112,6 +121,7 @@ export async function createReservation(
       newReservation.id,
     );
 
+    //쿠폰 사용 처리
     if (data.userCouponId) {
       await tx.userCoupon.update({
         where: { id: data.userCouponId },
@@ -142,14 +152,12 @@ export async function getReservations(
     searchType,
   } = query;
 
-  // 1. 필터 조건 구성
   const where: any = {};
   if (userId) where.userId = userId;
   if (classId) where.classId = classId;
   if (slotId) where.slotId = slotId;
   if (status) where.status = status;
 
-  // 검색 조건
   if (keyword) {
     if (searchType === "User") {
       where.user = {
@@ -171,7 +179,6 @@ export async function getReservations(
     }
   }
 
-  // 2. 날짜 필터
   if (startDate || endDate) {
     where.slot = where.slot || {};
     where.slot.startAt = {};
@@ -179,10 +186,8 @@ export async function getReservations(
     if (endDate) where.slot.startAt.lte = new Date(endDate);
   }
 
-  // 3. 페이지네이션 계산
   const skip = (page - 1) * limit;
 
-  // 4. Promise.all로 예약 목록과 총 개수 조회
   const [items, total] = await Promise.all([
     reservationRepository.findManyReservations({
       where,
@@ -193,7 +198,6 @@ export async function getReservations(
     reservationRepository.countReservations(where),
   ]);
 
-  // 7. PaginationResponse 반환
   return {
     data: items,
     total,
@@ -223,21 +227,16 @@ export async function cancelReservation(
   canceledBy: UserRole,
   now: Date = new Date(),
 ) {
-  // 1. 예약 조회
   const reservation =
     await reservationRepository.findReservationSimple(reservationId);
 
-  // 2. 예약이 없으면 에러
   if (!reservation) {
     throw new AppError(404, "예약을 찾을 수 없습니다", "RESERVATION_NOT_FOUND");
   }
 
-  // 3. 이미 취소됨
   if (reservation.status === ReservationStatus.CANCELED) {
     throw new AppError(400, "이미 취소된 예약입니다", "ALREADY_CANCELED");
   }
-
-  // 4. 이미 완료됨
   if (reservation.status === ReservationStatus.COMPLETED) {
     throw new AppError(
       400,
@@ -246,12 +245,9 @@ export async function cancelReservation(
     );
   }
 
-  // 5. CUSTOMER인 경우 본인 예약 확인
   if (canceledBy === UserRole.CUSTOMER && reservation.userId !== userId) {
     throw new AppError(403, "본인의 예약만 취소할 수 있습니다", "FORBIDDEN");
   }
-
-  // 6. 슬롯 시작 시간이 지났으면 에러
   if (reservation.slot.startAt < now) {
     throw new AppError(
       400,
@@ -260,9 +256,7 @@ export async function cancelReservation(
     );
   }
 
-  // 7. Transaction으로 취소 및 환불 처리
   const updatedReservation = await prisma.$transaction(async (tx) => {
-    // 예약 상태 변경
     const updated = await tx.reservation.update({
       where: { id: reservationId },
       data: {
@@ -273,7 +267,6 @@ export async function cancelReservation(
       },
     });
 
-    // 포인트 환불
     await pointService.refundPoints(
       tx,
       reservation.userId,
@@ -295,15 +288,12 @@ export async function getSellerSlots(
   sellerId: string,
   query: QuerySellerSlotsInput,
 ) {
-  // 1. 판매자의 센터 조회
   const center = await reservationRepository.findCenterByOwnerId(sellerId);
 
-  // 2. 센터가 없으면 에러
   if (!center) {
     throw new AppError(404, "센터 정보를 찾을 수 없습니다", "CENTER_NOT_FOUND");
   }
 
-  // 3-8. 슬롯 조회
   const params: {
     centerId: string;
     startDate: Date;
@@ -329,15 +319,12 @@ export async function getSellerReservations(
   sellerId: string,
   query: QueryReservationInput,
 ): Promise<PaginationResponse<any>> {
-  // 1. 판매자의 센터 조회
   const center = await reservationRepository.findCenterByOwnerId(sellerId);
 
-  // 2. 센터가 없으면 에러
   if (!center) {
     throw new AppError(404, "센터 정보를 찾을 수 없습니다", "CENTER_NOT_FOUND");
   }
 
-  // 3-4. 필터 조건 구성 및 조회
   const { page = 1, limit = 10, ...restQuery } = query;
   const skip = (page - 1) * limit;
 
@@ -363,7 +350,6 @@ export async function getSellerReservations(
     }),
   ]);
 
-  // 5. PaginationResponse 반환
   return {
     data: items,
     total,
@@ -378,20 +364,16 @@ export async function getSellerReservationDetail(
   sellerId: string,
   reservationId: string,
 ) {
-  // 1. 판매자의 센터 조회
   const center = await reservationRepository.findCenterByOwnerId(sellerId);
   if (!center) {
     throw new AppError(404, "센터 정보를 찾을 수 없습니다", "CENTER_NOT_FOUND");
   }
-
-  // 2. 예약 상세 조회
   const reservation =
     await reservationRepository.findSellerReservationDetail(reservationId);
   if (!reservation) {
     throw new AppError(404, "예약을 찾을 수 없습니다", "RESERVATION_NOT_FOUND");
   }
 
-  // 3. 센터 소유자 확인
   if (reservation.class.center.ownerId !== sellerId) {
     throw new AppError(
       403,
@@ -409,21 +391,16 @@ export async function cancelReservationBySeller(
   reservationId: string,
   data: CancelReservationInput,
 ) {
-  // 1. 예약 조회
   const reservation =
     await reservationRepository.findReservationSimple(reservationId);
 
-  // 2. 예약이 없으면 에러
   if (!reservation) {
     throw new AppError(404, "예약을 찾을 수 없습니다", "RESERVATION_NOT_FOUND");
   }
 
-  // 3. 센터 소유자 확인
   if (reservation.class.center.ownerId !== sellerId) {
     throw new AppError(403, "예약 취소 권한이 없습니다", "FORBIDDEN");
   }
-
-  // 4. cancelReservation 호출
   return cancelReservation(sellerId, reservationId, data, UserRole.SELLER);
 }
 
@@ -432,7 +409,6 @@ export async function cancelReservationsByClassChange(
   classId: string,
   reason: string,
 ) {
-  // 1. 해당 클래스의 모든 미래 BOOKED 예약 조회
   const reservations =
     await reservationRepository.findFutureReservationsByClassId(classId);
 
@@ -442,10 +418,8 @@ export async function cancelReservationsByClassChange(
 
   const now = new Date();
 
-  // 3. Transaction으로 일괄 취소 및 환불
   await prisma.$transaction(async (tx) => {
     for (const reservation of reservations) {
-      // 예약 취소
       await tx.reservation.update({
         where: { id: reservation.id },
         data: {
@@ -456,7 +430,6 @@ export async function cancelReservationsByClassChange(
         },
       });
 
-      // 포인트 환불
       await pointService.refundPoints(
         tx,
         reservation.userId,
@@ -467,7 +440,6 @@ export async function cancelReservationsByClassChange(
     }
   });
 
-  // 4. 취소된 예약 개수 반환
   return { canceledCount: reservations.length };
 }
 
@@ -476,7 +448,6 @@ export async function cancelReservationsBySlotChange(
   slotId: string,
   reason: string,
 ) {
-  // 1. 해당 슬롯의 BOOKED 예약 조회
   const reservations =
     await reservationRepository.findReservationsBySlotId(slotId);
 
@@ -486,10 +457,8 @@ export async function cancelReservationsBySlotChange(
 
   const now = new Date();
 
-  // 2. Transaction으로 일괄 취소 및 환불
   await prisma.$transaction(async (tx) => {
     for (const reservation of reservations) {
-      // 예약 취소
       await tx.reservation.update({
         where: { id: reservation.id },
         data: {
@@ -500,7 +469,6 @@ export async function cancelReservationsBySlotChange(
         },
       });
 
-      // 포인트 환불
       await pointService.refundPoints(
         tx,
         reservation.userId,
@@ -511,7 +479,6 @@ export async function cancelReservationsBySlotChange(
     }
   });
 
-  // 3. 취소된 예약 개수 반환
   return { canceledCount: reservations.length };
 }
 
@@ -521,26 +488,21 @@ export async function completeReservation(
   reservationId: string,
   now: Date = new Date(),
 ) {
-  // 1. 예약 조회
   const reservation =
     await reservationRepository.findReservationSimple(reservationId);
 
-  // 2. 예약이 없으면 에러
   if (!reservation) {
     throw new AppError(404, "예약을 찾을 수 없습니다", "RESERVATION_NOT_FOUND");
   }
 
-  // 3. 센터 소유자 확인
   if (reservation.class.center.ownerId !== sellerId) {
     throw new AppError(403, "예약 완료 처리 권한이 없습니다", "FORBIDDEN");
   }
 
-  // 4. 상태가 BOOKED가 아니면 에러
   if (reservation.status !== ReservationStatus.BOOKED) {
     throw new AppError(400, "예약 상태가 유효하지 않습니다", "INVALID_STATUS");
   }
 
-  // 5. 슬롯 종료 시간이 아직 안 지났으면 에러
   if (reservation.slot.endAt > now) {
     throw new AppError(
       400,
@@ -549,7 +511,6 @@ export async function completeReservation(
     );
   }
 
-  // 6. 예약 업데이트
   const updatedReservation = await prisma.reservation.update({
     where: { id: reservationId },
     data: {
@@ -565,19 +526,15 @@ export async function completeReservation(
 
 // [관리자] 최근 한달 예약 횟수 통계
 export async function getReservationStats(query: QueryReservationStatsInput) {
-  // 1. startDate, endDate 설정
   const endDate = query.endDate ? new Date(query.endDate) : new Date();
   const startDate = query.startDate
     ? new Date(query.startDate)
     : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000); // 30일 전
-
-  // 2-6. 통계 조회
   const [stats, dailyReservations] = await Promise.all([
     reservationRepository.getReservationStats({ startDate, endDate }),
     reservationRepository.getDailyReservationCounts({ startDate, endDate }),
   ]);
 
-  // 3. 상태별 예약 횟수 매핑
   const statusBreakdown = {
     BOOKED: 0,
     CANCELED: 0,
@@ -594,7 +551,6 @@ export async function getReservationStats(query: QueryReservationStatsInput) {
     }
   });
 
-  // 7. 통계 객체 반환
   return {
     period: {
       startDate: startDate.toISOString(),
