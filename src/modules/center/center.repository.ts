@@ -1,4 +1,4 @@
-import prisma from '../../config/prisma.js';
+import prisma from '../../config/prisma.ts';
 import { Prisma } from '@prisma/client';
 
 // 소유자 ID로 센터 조회

@@ -1,9 +1,9 @@
-import prisma from "../../config/prisma.js";
+import prisma from "../../config/prisma.ts";
 import { Prisma, ReservationStatus, UserRole } from "@prisma/client";
 
 // 예약 생성
 export async function createReservation(
-  data: Prisma.ReservationUncheckedCreateInput
+  data: Prisma.ReservationUncheckedCreateInput,
 ) {
   return prisma.reservation.create({
     data,
@@ -169,7 +169,7 @@ export async function countReservations(where: Prisma.ReservationWhereInput) {
 // 슬롯별 예약 수 조회 (정원 체크용)
 export async function countReservationsBySlot(
   slotId: string,
-  status: ReservationStatus = ReservationStatus.BOOKED
+  status: ReservationStatus = ReservationStatus.BOOKED,
 ) {
   return prisma.reservation.count({
     where: {
@@ -192,11 +192,13 @@ export async function findSlotsByCenterId(params: {
     class: {
       centerId: params.centerId,
       ...(params.classId && { id: params.classId }),
+      deletedAt: null,
     },
     startAt: {
       gte: params.startDate,
       lte: params.endDate,
     },
+    deletedAt: null,
   };
 
   return prisma.classSlot.findMany({
@@ -287,7 +289,7 @@ export async function cancelReservation(
     canceledAt: Date;
     canceledBy: UserRole;
     cancelNote?: string;
-  }
+  },
 ) {
   return prisma.reservation.update({
     where: { id: reservationId },
@@ -303,7 +305,7 @@ export async function cancelReservation(
 // 예약 완료 처리
 export async function completeReservation(
   reservationId: string,
-  completedAt: Date
+  completedAt: Date,
 ) {
   return prisma.reservation.update({
     where: { id: reservationId },
@@ -321,7 +323,7 @@ export async function cancelManyReservations(
     canceledAt: Date;
     canceledBy: UserRole;
     cancelNote: string;
-  }
+  },
 ) {
   return prisma.reservation.updateMany({
     where: {
@@ -416,7 +418,7 @@ export async function getDailyReservationCounts(params: {
 
 // 포인트 내역 생성
 export async function createPointHistory(
-  data: Prisma.PointHistoryUncheckedCreateInput
+  data: Prisma.PointHistoryUncheckedCreateInput,
 ) {
   return prisma.pointHistory.create({ data });
 }
@@ -474,8 +476,14 @@ export async function useUserCoupon(userCouponId: string, usedAt: Date) {
 
 // 슬롯 조회
 export async function findSlotWithClass(slotId: string) {
-  return prisma.classSlot.findUnique({
-    where: { id: slotId },
+  return prisma.classSlot.findFirst({
+    where: {
+      id: slotId,
+      deletedAt: null,
+      class: {
+        deletedAt: null,
+      },
+    },
     include: {
       class: {
         include: {
@@ -490,6 +498,21 @@ export async function findSlotWithClass(slotId: string) {
             },
           },
         },
+      },
+    },
+  });
+}
+
+// 슬롯 예약 카운트 증가
+export async function increaseSlotCurrentReservation(
+  tx: Prisma.TransactionClient,
+  slotId: string,
+) {
+  return tx.classSlot.update({
+    where: { id: slotId },
+    data: {
+      currentReservation: {
+        increment: 1,
       },
     },
   });
