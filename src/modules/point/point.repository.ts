@@ -1,4 +1,4 @@
-import prisma from "../../config/prisma.js";
+import prisma from "../../config/prisma.ts";
 import { ReservationStatus } from "@prisma/client";
 import type { Prisma, PointUsed } from "@prisma/client";
 
@@ -17,7 +17,7 @@ export async function findUserById(userId: string) {
 export async function incrementUserPoint(
   tx: Prisma.TransactionClient,
   userId: string,
-  amount: number
+  amount: number,
 ) {
   return tx.user.update({
     where: { id: userId },
@@ -31,7 +31,7 @@ export async function incrementUserPoint(
 export async function decrementUserPoint(
   tx: Prisma.TransactionClient,
   userId: string,
-  amount: number
+  amount: number,
 ) {
   return tx.user.update({
     where: { id: userId },
@@ -44,7 +44,7 @@ export async function decrementUserPoint(
 // [고객] 포인트 내역 생성
 export async function createPointHistory(
   tx: Prisma.TransactionClient,
-  data: Prisma.PointHistoryUncheckedCreateInput
+  data: Prisma.PointHistoryUncheckedCreateInput,
 ) {
   return tx.pointHistory.create({ data });
 }
@@ -78,7 +78,7 @@ export async function findPointHistories(params: {
 
 // [고객] 포인트 내역 개수 조회
 export async function countPointHistories(
-  where: Prisma.PointHistoryWhereInput
+  where: Prisma.PointHistoryWhereInput,
 ) {
   return prisma.pointHistory.count({ where });
 }
@@ -92,11 +92,10 @@ export async function findByPaymentKey(paymentKey: string) {
 
 // [고객] 트랜잭션 실행
 export async function executeTransaction<T>(
-  fn: (tx: Prisma.TransactionClient) => Promise<T>
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
   return prisma.$transaction(fn);
 }
-
 
 // [판매자] 소유자의 센터 조회
 export async function findCenterByOwnerId(ownerId: string) {

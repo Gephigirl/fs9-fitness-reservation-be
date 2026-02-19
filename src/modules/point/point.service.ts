@@ -1,8 +1,8 @@
 import { PointUsed } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
-import type { PaginationResponse } from "../../types/common.types.js";
-import { AppError } from "../../middlewares/errorHandler.js";
-import * as pointRepository from "./point.repository.js";
+import type { PaginationResponse } from "../../types/common.types.ts";
+import { AppError } from "../../middlewares/errorHandler.ts";
+import * as pointRepository from "./point.repository.ts";
 import type {
   ChargePointInput,
   AdjustPointInput,
@@ -10,7 +10,7 @@ import type {
   QueryAdminPointHistoryInput,
   QuerySellerSettlementInput,
   QuerySellerTransactionsInput,
-} from "./point.validation.js";
+} from "./point.validation.ts";
 
 
 // 포인트 사용 (예약 생성 시 호출)
