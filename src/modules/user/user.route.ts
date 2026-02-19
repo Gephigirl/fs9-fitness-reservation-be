@@ -30,6 +30,6 @@ router.get(
 );
 
 // GET /users/:id - 회원 상세 조회 (ADMIN)
-router.get("/:id", authenticate, requireRole(UserRole.ADMIN), getUserByIdHandler);
+router.get("/:id", authenticate, getUserByIdHandler);
 
 export default router;

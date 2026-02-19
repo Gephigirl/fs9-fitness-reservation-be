@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// 유저 목록 조회
 export const getUsersSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).default(1),
@@ -14,12 +15,10 @@ export type GetUsersSchema = z.infer<typeof getUsersSchema>;
 
 // 프로필 수정
 export const updateProfileSchema = z.object({
-  body: z.object({
-    nickname: z.string().min(1).max(50).optional(),
-    phone: z.string().min(1).max(20).optional(),
-    password: z.string().min(8).max(100).optional(),
-    introduction: z.string().max(500).optional(),
-  }),
+  nickname: z.string().min(1).max(50).optional(),
+  phone: z.string().min(1).max(20).optional(),
+  password: z.string().min(8).max(100).optional(),
+  introduction: z.string().max(500).optional(),
 });
 
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>["body"];
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

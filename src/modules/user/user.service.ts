@@ -2,6 +2,7 @@ import { UserRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 import * as userRepository from "./user.repository.ts";
 import { AppError } from "../../middlewares/errorHandler.ts";
+import type { UpdateProfileInput } from "./user.validation.ts";
 
 // 회원 목록 조회
 export async function getUsers({
@@ -64,15 +65,11 @@ export async function getUserStats() {
   return userRepository.getUserStats();
 }
 
+
 // 내 프로필 수정
 export async function updateProfile(
   userId: string,
-  data: {
-    nickname?: string;
-    phone?: string;
-    password?: string;
-    introduction?: string;
-  },
+  data: UpdateProfileInput,
   profileImgUrl?: string,
 ) {
   const updateData: Record<string, any> = {};
