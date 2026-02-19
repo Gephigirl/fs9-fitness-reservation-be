@@ -18,6 +18,7 @@ export async function createClass(data: Prisma.ClassCreateInput) {
 
 export async function findManyClasses(params: {
   where: Prisma.ClassWhereInput;
+  orderBy?: Prisma.ClassOrderByWithRelationInput | Prisma.ClassOrderByWithRelationInput[];
   skip: number;
   take: number;
 }) {
@@ -52,9 +53,7 @@ export async function findManyClasses(params: {
         },
       },
     },
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: params.orderBy || { createdAt: "desc" },
   });
 }
 

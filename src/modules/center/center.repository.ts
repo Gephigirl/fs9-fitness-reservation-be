@@ -18,6 +18,7 @@ export async function createCenter(data: Prisma.CenterUncheckedCreateInput) {
 // 센터 목록 조회 (페이지네이션)
 export async function findManycenters(params: {
   where: Prisma.CenterWhereInput;
+  orderBy?: Prisma.CenterOrderByWithRelationInput | Prisma.CenterOrderByWithRelationInput[];
   skip: number;
   take: number;
 }) {
@@ -38,9 +39,7 @@ export async function findManycenters(params: {
         },
       },
     },
-    orderBy: {
-      createdAt: 'desc',
-    },
+    orderBy: params.orderBy || { createdAt: 'desc' },
   });
 }
 

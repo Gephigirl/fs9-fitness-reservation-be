@@ -94,6 +94,8 @@ export async function getClassesHandler(
       status: req.query.status as string | undefined,
       centerId: req.query.centerId as string | undefined,
       search: req.query.search as string | undefined,
+      searchType: req.query.searchType as "className" | "centerName" | undefined,
+      sort: (req.query.sort as "latest" | "popularity") || "latest",
       page: req.query.page ? Number(req.query.page) : 1,
       limit: req.query.limit ? Number(req.query.limit) : 10,
     };

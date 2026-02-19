@@ -53,11 +53,28 @@ export async function getClasses(
     status,
     centerId,
     search,
+    sort,
     page = 1,
     limit = 10,
   } = query;
 
   const where: any = {};
+
+  let orderBy: Prisma.ClassOrderByWithRelationInput | Prisma.ClassOrderByWithRelationInput[];
+
+  if (sort === "popularity") {
+    orderBy = {
+      reviews: {
+        _count: "desc",
+      },
+    };
+  } else {
+    orderBy = { createdAt: "desc" };
+  }
+
+  // 정렬 조건 설정
+
+
   if (category) where.category = category;
   if (level) where.level = level;
   if (centerId) where.centerId = centerId;
