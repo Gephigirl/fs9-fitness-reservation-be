@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import * as authService from './auth.service.ts';
 import * as centerService from '../center/center.service.ts';
 import { env } from '../../config/env.ts';
+import { AppError } from '../../middlewares/errorHandler.ts';
 
 const ACCESS_COOKIE_NAME = 'accessToken';
 const REFRESH_COOKIE_NAME = 'refreshToken';

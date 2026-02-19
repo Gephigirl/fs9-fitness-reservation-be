@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import authRepo from './auth.repository.js';
-import { env } from '../../config/env.js';
-import { AppError } from '../../middlewares/errorHandler.js';
+import authRepo from './auth.repository.ts';
+import { env } from '../../config/env.ts';
+import { AppError } from '../../middlewares/errorHandler.ts';
 
 async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
