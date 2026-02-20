@@ -109,7 +109,7 @@ HTTP Status Code와 함께 다음 에러 객체를 반환합니다.
 
 ### [공통] 센터 목록 조회
 - **URL**: `GET /centers`
-- **Query Params**: `name` (선택), `page` (기본 1), `limit` (기본 10)
+- **Query Params**: `name`, `sort` (선택), `page` (기본 1), `limit` (기본 10)
 - **Response**: `200 OK` (Paging)
 
 ### [공통] 센터 상세 조회
@@ -133,7 +133,7 @@ HTTP Status Code와 함께 다음 에러 객체를 반환합니다.
 
 ### [공통] 클래스 목록 조회
 - **URL**: `GET /classes`
-- **Query Params**: `category`, `level`, `status`, `centerId`, `search`, `searchType` (선택), `page` (기본 1), `limit` (기본 10)
+- **Query Params**: `category`, `level`, `status`, `centerId`, `search`, `searchType`, `sort` (선택), `page` (기본 1), `limit` (기본 10)
 - **Response**: `200 OK` (Paging)
 
 ### [공통] 클래스 상세 조회
@@ -466,12 +466,22 @@ PG사 결제 완료 후 호출하여 충전 처리합니다.
     "email": "user@example.com",
     "password": "password123",
     "nickname": "헬린이",
-    "phone": "010-1234-5678",
+    "phone": "01012345678",
     "role": "CUSTOMER"
   }
   ```
   - `role`: `CUSTOMER` | `SELLER` (선택, 기본값 `CUSTOMER`). ADMIN은 가입 불가.
-  - SELLER 가입 시 `center` 정보가 필요할 수 있음.
+  - `SELLER` 가입 시에는 반드시 아래와 같은 `center` 객체가 포함되어야 합니다.
+  ```json
+  {
+    "role": "SELLER",
+    "center": {
+      "name": "짐 체육관",
+      "address1": "서울시 강남구 테헤란로",
+      "address2": "1층"
+    }
+  }
+  ```
 
 ### 로그인
 - **URL**: `POST /auth/login`
