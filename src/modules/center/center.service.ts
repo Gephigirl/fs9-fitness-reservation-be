@@ -125,3 +125,33 @@ export async function updateCenter(
 
   return updatedCenter;
 }
+
+//내 센터 정보 수정 Auth에서 사용
+export async function updateMyCenter(
+  userId: string,
+  data: UpdateCenterInput,
+  tx?: Prisma.TransactionClient, 
+) {
+  const center = await centerRepository.findCenterByOwnerId(userId);
+
+  if (!center) {
+    throw new AppError(404, "등록된 센터가 없습니다", "CENTER_NOT_FOUND");
+  }
+
+  const updateData: Record<string, any> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.address1 !== undefined) updateData.address1 = data.address1;
+  if (data.address2 !== undefined) updateData.address2 = data.address2;
+  if (data.introduction !== undefined)
+    updateData.introduction = data.introduction;
+
+  if (Object.keys(updateData).length === 0) {
+    return center;
+  }
+
+  if (tx) {
+    return centerRepository.updateCenterWithTx(tx, center.id, updateData);
+  }
+
+  return centerRepository.updateCenter(center.id, updateData);
+}

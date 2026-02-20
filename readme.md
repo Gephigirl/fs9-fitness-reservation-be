@@ -86,18 +86,7 @@ HTTP Status Code와 함께 다음 에러 객체를 반환합니다.
   - `403`: 타인 조회 시도 (본인 또는 ADMIN만 가능)
   - `USER_NOT_FOUND`: 회원 없음
 
-### [로그인 유저] 내 프로필 수정
-- **URL**: `PATCH /users/me`
-- **Header**: `Authorization` 필수
-- **Body** (multipart/form-data 또는 application/json):
-  - `nickname`: 닉네임 (선택)
-  - `phone`: 연락처 (선택)
-  - `introduction`: 자기소개 (선택, SELLER 등)
-  - `password`: 새 비밀번호 (선택)
-  - `profileImage`: 프로필 이미지 파일 (선택, multipart 시)
-- **Response**: `200 OK`
-- **Error Codes**:
-  - `NO_UPDATE_DATA`: 수정할 항목 없음
+
 
 ### [관리자] 회원 메모 수정
 회원 상세에 대한 관리자 전용 메모를 저장/수정합니다. 상세 조회 시 `note` 필드로 내려갑니다.
@@ -513,8 +502,29 @@ Access Token 만료 시 호출합니다. (쿠키 기반)
 - **Header**: `Authorization` 필수
 - **Response**: `200 OK` (현재 로그인 유저 정보)
 
-### [로그인 유저] 내 정보 수정
-- **URL**: `PUT /auth/me`
-- **Header**: `Authorization` 필수
-- **Body**: 수정할 필드 (nickname, phone, password 등, 프로젝트 스키마에 따름)
+### [고객] 내 정보 수정
+- **URL**: `PUT /auth/customer/me`
+- **Header**: `Authorization` 필수 (CUSTOMER)
+- **Body** (multipart/form-data 또는 application/json):
+  - `nickname`: 닉네임 (선택)
+  - `phone`: 연락처 (선택)
+  - `introduction`: 자기소개 (선택)
+  - `password`: 새 비밀번호 (선택)
+  - `passwordConfirm`: 비밀번호 확인 (password 입력 시 필수)
+  - `profileImage`: 프로필 이미지 파일 (선택, multipart 시)
+- **Response**: `200 OK`
+
+### [판매자] 내 정보 수정 (센터 정보 포함)
+- **URL**: `PUT /auth/seller/me`
+- **Header**: `Authorization` 필수 (SELLER)
+- **Body** (multipart/form-data 또는 application/json):
+  - `nickname`: 닉네임 (선택)
+  - `phone`: 연락처 (선택)
+  - `password`: 새 비밀번호 (선택)
+  - `passwordConfirm`: 비밀번호 확인 (password 입력 시 필수)
+  - `centerName`: 업체명 (선택)
+  - `address1`: 도로명주소 (선택)
+  - `address2`: 상세주소 (선택)
+  - `introduction`: 업체소개 (선택)
+  - `profileImage`: 프로필 이미지 파일 (선택, multipart 시)
 - **Response**: `200 OK`

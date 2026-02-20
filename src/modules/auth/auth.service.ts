@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import authRepo from './auth.repository.ts';
 import { env } from '../../config/env.ts';
 import { AppError } from '../../middlewares/errorHandler.ts';
+import type { UpdateCustomerInput, UpdateSellerInput } from './auth.validation.ts';
 
 async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
@@ -100,7 +101,79 @@ export async function getUserById(id: string) {
   return filterSensitiveUserData(user);
 }
 
-export async function updateUser(id: string, data: any) {
-  const updatedUser = await authRepo.update(id, data);
+// 고객 프로필 수정
+export async function updateCustomerProfile(
+  userId: string,
+  data: UpdateCustomerInput, 
+  profileImgUrl?: string,
+) {
+  const updateData: Record<string, any> = {};
+
+  if (data.nickname !== undefined) updateData.nickname = data.nickname;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  // 고객의 introduction은 user 테이블의 introduction 필드 사용 (필요시)
+  if (data.introduction !== undefined) updateData.introduction = data.introduction;
+
+  if (data.password) {
+    updateData.password = await bcrypt.hash(data.password, 10);
+  }
+
+  if (profileImgUrl !== undefined) {
+    updateData.profileImgUrl = profileImgUrl;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    // 변경사항 없으면 조회해서 반환
+    const user = await authRepo.findById(userId);
+    return filterSensitiveUserData(user);
+  }
+
+  const updatedUser = await authRepo.update(userId, updateData);
+  return filterSensitiveUserData(updatedUser);
+}
+
+import * as centerService from '../center/center.service.ts';
+import prisma from '../../config/prisma.ts';
+
+// 판매자 프로필 수정 (User + Center 정보 동시 수정)
+export async function updateSellerProfile(
+  userId: string,
+  data: UpdateSellerInput,
+  profileImgUrl?: string,
+) {
+  // 유저 정보 업데이트 데이터 준비
+  const userUpdateData: Record<string, any> = {};
+  if (data.nickname !== undefined) userUpdateData.nickname = data.nickname;
+  if (data.phone !== undefined) userUpdateData.phone = data.phone;
+  if (data.password) {
+    userUpdateData.password = await bcrypt.hash(data.password, 10);
+  }
+  if (profileImgUrl !== undefined) {
+    userUpdateData.profileImgUrl = profileImgUrl;
+  }
+
+  // 센터 정보 업데이트 데이터 준비
+  const centerUpdateData: Record<string, any> = {};
+  if (data.centerName !== undefined) centerUpdateData.name = data.centerName;
+  if (data.address1 !== undefined) centerUpdateData.address1 = data.address1;
+  if (data.address2 !== undefined) centerUpdateData.address2 = data.address2;
+  if (data.introduction !== undefined) centerUpdateData.introduction = data.introduction; // 업체 소개
+
+  // 유저 정보와 센터 정보를 한 번에 업데이트
+  const updatedUser = await prisma.$transaction(async (tx) => {
+    let user;
+    if (Object.keys(userUpdateData).length > 0) {
+      user = await authRepo.updateWithTx(tx, userId, userUpdateData);
+    } else {
+      user = await authRepo.findByIdWithTx(tx, userId);
+    }
+
+    if (Object.keys(centerUpdateData).length > 0) {
+      await centerService.updateMyCenter(userId, centerUpdateData, tx);
+    }
+
+    return user;
+  });
+
   return filterSensitiveUserData(updatedUser);
 }
