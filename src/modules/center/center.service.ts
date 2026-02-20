@@ -6,6 +6,7 @@ import type {
 import type { PaginationResponse } from "../../types/common.types.ts";
 import { AppError } from "../../middlewares/errorHandler.ts";
 import * as centerRepository from "./center.repository.ts";
+import { Prisma } from "@prisma/client";
 
 // 센터 등록
 // 판매자 1명당 센터 1개만 등록 가능
@@ -35,10 +36,18 @@ export async function getCenters(
   query: QueryCenterInput,
 ): Promise<PaginationResponse<any>> {
   const name = query.name;
+  const sort = query.sort;
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 10;
 
   const where: any = {};
+
+  let orderBy: Prisma.CenterOrderByWithRelationInput | Prisma.CenterOrderByWithRelationInput[];
+  if (sort === "name") {
+    orderBy = { name: "asc" };
+  } else {
+    orderBy = { createdAt: "desc" };
+  }
   if (name) {
     where.name = { contains: name, mode: "insensitive" };
   }
@@ -46,7 +55,7 @@ export async function getCenters(
   const skip = (page - 1) * limit;
 
   const [centers, total] = await Promise.all([
-    centerRepository.findManycenters({ where, skip, take: limit }),
+    centerRepository.findManycenters({ where, orderBy, skip, take: limit }),
     centerRepository.countCenters(where),
   ]);
 

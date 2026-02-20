@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authenticate, requireRole } from "../../middlewares/auth.js";
-import { validate } from "../../middlewares/validate.js";
+import { authenticate, requireRole } from "../../middlewares/auth.ts";
+import { validate } from "../../middlewares/validate.ts";
 import {
   chargePointSchema,
   queryMyPointHistorySchema,
@@ -8,7 +8,7 @@ import {
   queryAdminPointHistorySchema,
   querySellerSettlementSchema,
   querySellerTransactionsSchema,
-} from "./point.validation.js";
+} from "./point.validation.ts";
 import {
   getMyBalanceHandler,
   getMyPointHistoryHandler,
@@ -17,7 +17,7 @@ import {
   getAdminPointHistoryHandler,
   getSellerSettlementHandler,
   getSellerTransactionsHandler,
-} from "./point.controller.js";
+} from "./point.controller.ts";
 
 const router = Router();
 

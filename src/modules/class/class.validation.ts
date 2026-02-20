@@ -85,6 +85,7 @@ export const queryClassSchema = z.object({
     centerId: z.string().min(1, "올바른 센터 ID가 아닙니다").optional(),
     search: z.string().optional(),
     searchType: z.enum(["className", "centerName"]).optional(),
+    sort: z.enum(["latest", "popularity"]).optional().default("latest"),
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(10),
   }),

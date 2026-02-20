@@ -1,4 +1,4 @@
-import prisma from '../../config/prisma.js';
+import prisma from '../../config/prisma.ts';
 import { Prisma } from '@prisma/client';
 
 // 소유자 ID로 센터 조회
@@ -18,6 +18,7 @@ export async function createCenter(data: Prisma.CenterUncheckedCreateInput) {
 // 센터 목록 조회 (페이지네이션)
 export async function findManycenters(params: {
   where: Prisma.CenterWhereInput;
+  orderBy?: Prisma.CenterOrderByWithRelationInput | Prisma.CenterOrderByWithRelationInput[];
   skip: number;
   take: number;
 }) {
@@ -38,9 +39,7 @@ export async function findManycenters(params: {
         },
       },
     },
-    orderBy: {
-      createdAt: 'desc',
-    },
+    orderBy: params.orderBy || { createdAt: 'desc' },
   });
 }
 
