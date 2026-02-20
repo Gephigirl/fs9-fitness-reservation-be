@@ -152,12 +152,19 @@ export async function updateClassHandler(
       throw new AppError(400, "클래스 ID가 필요합니다", "MISSING_CLASS_ID");
     }
 
-    const { bannerUrl, imgUrls } = getFileUrls(req);
+    const { bannerUrl, imgUrls: newImgUrls } = getFileUrls(req);
+
+    let remainingImgUrls = req.body.imgUrls || [];
+    if (typeof remainingImgUrls === "string") {
+      remainingImgUrls = JSON.parse(remainingImgUrls);
+    }
+
+    const finalImgUrls = [...remainingImgUrls, ...newImgUrls];
 
     const updateData = {
       ...req.body,
       ...(bannerUrl && { bannerUrl }),
-      ...(imgUrls.length > 0 && { imgUrls }),
+      imgUrls: finalImgUrls,
     };
 
     const updatedClass = await classService.updateClass(
