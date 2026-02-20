@@ -86,18 +86,7 @@ HTTP Status Code와 함께 다음 에러 객체를 반환합니다.
   - `403`: 타인 조회 시도 (본인 또는 ADMIN만 가능)
   - `USER_NOT_FOUND`: 회원 없음
 
-### [로그인 유저] 내 프로필 수정
-- **URL**: `PATCH /users/me`
-- **Header**: `Authorization` 필수
-- **Body** (multipart/form-data 또는 application/json):
-  - `nickname`: 닉네임 (선택)
-  - `phone`: 연락처 (선택)
-  - `introduction`: 자기소개 (선택, SELLER 등)
-  - `password`: 새 비밀번호 (선택)
-  - `profileImage`: 프로필 이미지 파일 (선택, multipart 시)
-- **Response**: `200 OK`
-- **Error Codes**:
-  - `NO_UPDATE_DATA`: 수정할 항목 없음
+
 
 ### [관리자] 회원 메모 수정
 회원 상세에 대한 관리자 전용 메모를 저장/수정합니다. 상세 조회 시 `note` 필드로 내려갑니다.
@@ -120,7 +109,7 @@ HTTP Status Code와 함께 다음 에러 객체를 반환합니다.
 
 ### [공통] 센터 목록 조회
 - **URL**: `GET /centers`
-- **Query Params**: `name` (선택), `page` (기본 1), `limit` (기본 10)
+- **Query Params**: `name`, `sort` (선택), `page` (기본 1), `limit` (기본 10)
 - **Response**: `200 OK` (Paging)
 
 ### [공통] 센터 상세 조회
@@ -144,7 +133,7 @@ HTTP Status Code와 함께 다음 에러 객체를 반환합니다.
 
 ### [공통] 클래스 목록 조회
 - **URL**: `GET /classes`
-- **Query Params**: `category`, `level`, `status`, `centerId`, `search`, `searchType` (선택), `page` (기본 1), `limit` (기본 10)
+- **Query Params**: `category`, `level`, `status`, `centerId`, `search`, `searchType`, `sort` (선택), `page` (기본 1), `limit` (기본 10)
 - **Response**: `200 OK` (Paging)
 
 ### [공통] 클래스 상세 조회
@@ -477,12 +466,22 @@ PG사 결제 완료 후 호출하여 충전 처리합니다.
     "email": "user@example.com",
     "password": "password123",
     "nickname": "헬린이",
-    "phone": "010-1234-5678",
+    "phone": "01012345678",
     "role": "CUSTOMER"
   }
   ```
   - `role`: `CUSTOMER` | `SELLER` (선택, 기본값 `CUSTOMER`). ADMIN은 가입 불가.
-  - SELLER 가입 시 `center` 정보가 필요할 수 있음.
+  - `SELLER` 가입 시에는 반드시 아래와 같은 `center` 객체가 포함되어야 합니다.
+  ```json
+  {
+    "role": "SELLER",
+    "center": {
+      "name": "짐 체육관",
+      "address1": "서울시 강남구 테헤란로",
+      "address2": "1층"
+    }
+  }
+  ```
 
 ### 로그인
 - **URL**: `POST /auth/login`
@@ -513,8 +512,29 @@ Access Token 만료 시 호출합니다. (쿠키 기반)
 - **Header**: `Authorization` 필수
 - **Response**: `200 OK` (현재 로그인 유저 정보)
 
-### [로그인 유저] 내 정보 수정
-- **URL**: `PUT /auth/me`
-- **Header**: `Authorization` 필수
-- **Body**: 수정할 필드 (nickname, phone, password 등, 프로젝트 스키마에 따름)
+### [고객] 내 정보 수정
+- **URL**: `PUT /auth/customer/me`
+- **Header**: `Authorization` 필수 (CUSTOMER)
+- **Body** (multipart/form-data 또는 application/json):
+  - `nickname`: 닉네임 (선택)
+  - `phone`: 연락처 (선택)
+  - `introduction`: 자기소개 (선택)
+  - `password`: 새 비밀번호 (선택)
+  - `passwordConfirm`: 비밀번호 확인 (password 입력 시 필수)
+  - `profileImage`: 프로필 이미지 파일 (선택, multipart 시)
+- **Response**: `200 OK`
+
+### [판매자] 내 정보 수정 (센터 정보 포함)
+- **URL**: `PUT /auth/seller/me`
+- **Header**: `Authorization` 필수 (SELLER)
+- **Body** (multipart/form-data 또는 application/json):
+  - `nickname`: 닉네임 (선택)
+  - `phone`: 연락처 (선택)
+  - `password`: 새 비밀번호 (선택)
+  - `passwordConfirm`: 비밀번호 확인 (password 입력 시 필수)
+  - `centerName`: 업체명 (선택)
+  - `address1`: 도로명주소 (선택)
+  - `address2`: 상세주소 (선택)
+  - `introduction`: 업체소개 (선택)
+  - `profileImage`: 프로필 이미지 파일 (선택, multipart 시)
 - **Response**: `200 OK`

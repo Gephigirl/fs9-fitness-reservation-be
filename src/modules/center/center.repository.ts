@@ -101,6 +101,18 @@ export async function updateCenter(centerId: string, data: Prisma.CenterUpdateIn
   });
 }
 
+// 센터 수정 (트랜잭션 지원)
+export async function updateCenterWithTx(
+  tx: Prisma.TransactionClient,
+  centerId: string,
+  data: Prisma.CenterUpdateInput
+) {
+  return tx.center.update({
+    where: { id: centerId },
+    data,
+  });
+}
+
 // 센터 삭제
 export async function deleteCenter(centerId: string) {
   return prisma.center.delete({

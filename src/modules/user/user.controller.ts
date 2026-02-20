@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import * as userService from "./user.service.ts";
-import { updateProfileSchema } from "./user.validation.ts";
+
 import { AppError } from "../../middlewares/errorHandler.ts";
 import type { AuthRequest } from "../../middlewares/auth.ts";
 
@@ -123,51 +123,4 @@ export async function patchUserNoteHandler(
   }
 }
 
-// multer 파일 타입
-interface MulterFile {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  destination: string;
-  filename: string;
-  path: string;
-  size: number;
-}
 
-// PATCH /users/me - 내 프로필 수정
-export async function updateProfileHandler(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
-  try {
-    const authReq = req as AuthRequest;
-    if (!authReq.user) {
-      throw new AppError(401, "인증이 필요합니다", "AUTHENTICATION_REQUIRED");
-    }
-
-    // 프로필 이미지 처리
-    let profileImgUrl: string | undefined;
-    const filesReq = req as Request & { file?: MulterFile };
-    if (filesReq.file) {
-      const serverUrl =
-        process.env.SERVER_URL ||
-        `http://localhost:${process.env.PORT || 3000}`;
-      profileImgUrl = `${serverUrl}/uploads/profiles/${filesReq.file.filename}`;
-    }
-
-    // Validation 수행
-    const input = updateProfileSchema.parse(req.body);
-
-    const updatedUser = await userService.updateProfile(
-      authReq.user.id,
-      input,
-      profileImgUrl,
-    );
-
-    res.status(200).json({ success: true, data: updatedUser });
-  } catch (error) {
-    next(error);
-  }
-}

@@ -1,8 +1,6 @@
 import { UserRole } from "@prisma/client";
-import bcrypt from "bcrypt";
 import * as userRepository from "./user.repository.ts";
 import { AppError } from "../../middlewares/errorHandler.ts";
-import type { UpdateProfileInput } from "./user.validation.ts";
 
 // 회원 목록 조회
 export async function getUsers({
@@ -73,31 +71,4 @@ export async function updateUserNote(userId: string, note: string | null) {
     throw new AppError(404, "회원을 찾을 수 없습니다", "USER_NOT_FOUND");
   }
   return userRepository.updateUserNote(userId, note);
-}
-
-// 내 프로필 수정
-export async function updateProfile(
-  userId: string,
-  data: UpdateProfileInput,
-  profileImgUrl?: string,
-) {
-  const updateData: Record<string, any> = {};
-
-  if (data.nickname !== undefined) updateData.nickname = data.nickname;
-  if (data.phone !== undefined) updateData.phone = data.phone;
-  if (data.introduction !== undefined) updateData.introduction = data.introduction;
-
-  if (data.password) {
-    updateData.password = await bcrypt.hash(data.password, 10);
-  }
-
-  if (profileImgUrl !== undefined) {
-    updateData.profileImgUrl = profileImgUrl;
-  }
-
-  if (Object.keys(updateData).length === 0) {
-    throw new AppError(400, "수정할 항목이 없습니다", "NO_UPDATE_DATA");
-  }
-
-  return userRepository.updateUser(userId, updateData);
 }

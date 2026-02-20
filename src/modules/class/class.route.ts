@@ -5,10 +5,7 @@ import {
   requireRole,
 } from "../../middlewares/auth.ts";
 import { validate } from "../../middlewares/validate.ts";
-import {
-  uploadClassImages,
-  handleUploadError,
-} from "../../middlewares/upload.ts";
+import { uploadClassImages } from "../../middlewares/upload.ts";
 
 import {
   createClassHandler,
@@ -63,7 +60,6 @@ router.post(
   authenticate,
   requireRole("SELLER"),
   uploadClassImages,
-  handleUploadError,
   validate(createClassSchema),
   createClassHandler,
 );
@@ -74,7 +70,6 @@ router.patch(
   authenticate,
   requireRole("SELLER"),
   uploadClassImages,
-  handleUploadError,
   validate(updateClassSchema),
   updateClassHandler,
 );

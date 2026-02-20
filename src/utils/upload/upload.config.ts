@@ -7,7 +7,7 @@ import type { Request } from 'express';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 업로드 디렉토리 설정
+// 업로드 디렉토리
 const UPLOAD_DIR = path.join(__dirname, '../../../uploads');
 
 // 업로드 디렉토리 생성
@@ -18,24 +18,28 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 // 이미지 타입별 하위 디렉토리
 export const UPLOAD_PATHS = {
   CLASS: path.join(UPLOAD_DIR, 'classes'),
-  // CENTER: path.join(UPLOAD_DIR, 'centers'), (center schema 추가 시)
   PROFILE: path.join(UPLOAD_DIR, 'profiles'),
   REVIEW: path.join(UPLOAD_DIR, 'reviews'),
 } as const;
 
-// 디렉토리 생성
+// 하위 디렉토리 자동 생성
 Object.values(UPLOAD_PATHS).forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 });
 
-
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-export const MAX_FILE_SIZE = 5 * 1024 * 1024;
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
+// 로컬
 export const createStorage = (uploadPath: string) => {
+  // 폴더 없으면 자동 생성
+  if (!fs.existsSync(uploadPath)) {
+    fs.mkdirSync(uploadPath, { recursive: true });
+  }
+
   return multer.diskStorage({
     destination: (req: Request, file, cb) => {
       cb(null, uploadPath);
@@ -50,7 +54,37 @@ export const createStorage = (uploadPath: string) => {
   });
 };
 
-// 파일 필터
+// S3 전환 시 주석 해제
+// S3 스토리지 
+// import multerS3 from 'multer-s3';
+// import { S3Client } from '@aws-sdk/client-s3';
+// import { env } from '../../config/env.ts';
+//
+// const s3 = new S3Client({
+//   region: env.AWS_REGION,
+//   credentials: {
+//     accessKeyId: env.AWS_ACCESS_KEY_ID,
+//     secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+//   },
+// });
+//
+// export const createS3Storage = (subDir: string) => {
+//   return multerS3({
+//     s3,
+//     bucket: env.AWS_BUCKET_NAME,
+//     acl: 'public-read',
+//     key: (req, file, cb) => {
+//       const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+//       const ext = path.extname(file.originalname).toLowerCase();
+//       const basename = path.basename(file.originalname, ext);
+//       const safeBasename = basename.replace(/[^a-zA-Z0-9가-힣]/g, '_').substring(0, 50);
+//       cb(null, `${subDir}/${safeBasename}-${uniqueSuffix}${ext}`);
+//     },
+//   });
+// };
+// ──────────────────────────────────────────────
+
+// 파일 필터 (이미지만 허용)
 export const imageFileFilter = (
   req: Request,
   file: any,
@@ -72,7 +106,7 @@ export const imageFileFilter = (
   cb(null, true);
 };
 
-// 파일 삭제
+// 파일 삭제 유틸
 export const deleteFile = (filePath: string): void => {
   try {
     if (fs.existsSync(filePath)) {
@@ -83,7 +117,7 @@ export const deleteFile = (filePath: string): void => {
   }
 };
 
-// URL에서 파일 경로 추출
+// URL에서 파일 경로 추출 유틸
 export const getFilePathFromUrl = (url: string): string | null => {
   try {
     const urlObj = new URL(url);
