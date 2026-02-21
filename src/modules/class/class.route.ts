@@ -5,10 +5,7 @@ import {
   requireRole,
 } from "../../middlewares/auth.ts";
 import { validate } from "../../middlewares/validate.ts";
-import {
-  uploadClassImages,
-  handleUploadError,
-} from "../../middlewares/upload.ts";
+import { uploadClassImages } from "../../middlewares/upload.ts";
 
 import {
   createClassHandler,
@@ -63,7 +60,6 @@ router.post(
   authenticate,
   requireRole("SELLER"),
   uploadClassImages,
-  handleUploadError,
   validate(createClassSchema),
   createClassHandler,
 );
@@ -74,13 +70,17 @@ router.patch(
   authenticate,
   requireRole("SELLER"),
   uploadClassImages,
-  handleUploadError,
   validate(updateClassSchema),
   updateClassHandler,
 );
 
-// DELETE /classes/:id - 클래스 삭제 (판매자, 인증 필요)
-router.delete("/:id", authenticate, requireRole("SELLER"), deleteClassHandler);
+// DELETE /classes/:id - 클래스 삭제 (판매자 또는 관리자)
+router.delete(
+  "/:id",
+  authenticate,
+  requireRole("SELLER", "ADMIN"),
+  deleteClassHandler
+);
 
 // PATCH /classes/:id/approve - 클래스 승인 (관리자, 인증 필요)
 router.patch(

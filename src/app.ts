@@ -12,6 +12,11 @@ import { logger } from "./middlewares/logger.ts";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.ts";
 import authRouter from "./modules/auth/auth.route.ts";
 
+const __fileimport pointRouter from "./modules/point/point.route.ts";
+import reviewRouter from "./modules/review/review.route.ts";
+import userRouter from "./modules/user/user.route.ts";
+import couponRouter from "./modules/coupon/coupon.route.ts";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -42,11 +47,8 @@ app.get("/health", (req, res) => {
 app.use("/api/centers", centerRouter);
 app.use("/api/classes", classRouter);
 app.use("/api/reservations", reservationRouter);
+app.use("/api/points", pointRouter);
+app.use("/api/reviews", reviewRouter);
+app.use("/api/users", userRouter);
+app.use("/api/coupons", couponRouter);
 app.use("/api/notifications", notificationRouter);
-
-
-// 에러핸들러
-app.use(notFoundHandler);
-app.use(errorHandler);
-
-export default app;

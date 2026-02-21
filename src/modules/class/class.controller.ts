@@ -20,12 +20,14 @@ interface MulterFile {
 // 업로드된 파일을 URL로 변환
 // 첫 번째 이미지가 대표 이미지
 function getFileUrls(req: Request) {
-  const files = (
-    req as Request & { files?: { [fieldname: string]: MulterFile[] } }
-  ).files;
+  const files = req.files as MulterFile[] | undefined;
   const baseUrl = `${env.SERVER_URL}/uploads/classes`;
-  const imgUrls =
-    files?.images?.map((file) => `${baseUrl}/${file.filename}`) || [];
+  
+  if (!files || !Array.isArray(files)) {
+      return { bannerUrl: undefined, imgUrls: [] };
+  }
+
+  const imgUrls = files.map((file) => `${baseUrl}/${file.filename}`);
   const bannerUrl = imgUrls.length > 0 ? imgUrls[0] : undefined;
 
   return { bannerUrl, imgUrls };
@@ -90,10 +92,12 @@ export async function getClassesHandler(
 
     const query = {
       category: req.query.category as string | undefined,
-      level: req.query.level as any,
-      status: req.query.status as any,
+      level: req.query.level as "입문" | "초급" | "중급" | "고급" | undefined,
+      status: req.query.status as string | undefined,
       centerId: req.query.centerId as string | undefined,
       search: req.query.search as string | undefined,
+      searchType: req.query.searchType as "className" | "centerName" | undefined,
+      sort: (req.query.sort as "latest" | "popularity") || "latest",
       page: req.query.page ? Number(req.query.page) : 1,
       limit: req.query.limit ? Number(req.query.limit) : 10,
     };
@@ -148,12 +152,19 @@ export async function updateClassHandler(
       throw new AppError(400, "클래스 ID가 필요합니다", "MISSING_CLASS_ID");
     }
 
-    const { bannerUrl, imgUrls } = getFileUrls(req);
+    const { bannerUrl, imgUrls: newImgUrls } = getFileUrls(req);
+
+    let remainingImgUrls = req.body.imgUrls || [];
+    if (typeof remainingImgUrls === "string") {
+      remainingImgUrls = JSON.parse(remainingImgUrls);
+    }
+
+    const finalImgUrls = [...remainingImgUrls, ...newImgUrls];
 
     const updateData = {
       ...req.body,
       ...(bannerUrl && { bannerUrl }),
-      ...(imgUrls.length > 0 && { imgUrls }),
+      imgUrls: finalImgUrls,
     };
 
     const updatedClass = await classService.updateClass(
@@ -186,7 +197,11 @@ export async function deleteClassHandler(
       throw new AppError(400, "클래스 ID가 필요합니다", "MISSING_CLASS_ID");
     }
 
-    const result = await classService.deleteClass(authReq.user.id, id);
+    const result = await classService.deleteClass(
+      authReq.user.id,
+      id,
+      authReq.user.role
+    );
 
     res.status(200).json({
       success: true,

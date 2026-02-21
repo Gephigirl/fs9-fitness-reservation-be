@@ -3,9 +3,9 @@ import {
   UserRole,
   ClassStatus,
   ReservationStatus,
+  PointUsed,
 } from "@prisma/client";
 import bcrypt from "bcrypt";
-import jwt, { SignOptions } from "jsonwebtoken";
 import { PrismaPg } from "@prisma/adapter-pg";
 import dotenv from "dotenv";
 
@@ -14,464 +14,408 @@ dotenv.config();
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
+// --- 헬퍼 함수 ---
+function createCuid() {
+  const S4 = () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+  return 'c' + "00000000000".slice(0, 11) + S4() + S4() + S4();
+}
+
+function randomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomItem<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomDate(start: Date, end: Date) {
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+}
+
 async function main() {
-  console.log("🌱 시드 데이터 생성 시작...\n");
+  console.log("🌱 시드 데이터 생성 시작 \n");
 
-  // 기존 데이터 삭제 (순서 중요: 자식 테이블부터 삭제)
-  await prisma.pointHistory.deleteMany();
-  await prisma.review.deleteMany();
-  await prisma.reservation.deleteMany(); // Reservation이 UserCoupon을 참조하므로 먼저 삭제
-  await prisma.userCoupon.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.classSlot.deleteMany();
-  await prisma.class.deleteMany();
-  await prisma.couponTemplate.deleteMany();
-  await prisma.center.deleteMany();
-  await prisma.user.deleteMany();
-
-  // 1. 테스트 사용자 생성
-  const hashedPassword = await bcrypt.hash("test1234", 10);
-
-  // SELLER
-  const seller = await prisma.user.upsert({
-    where: { email: "seller@test.com" },
-    update: {},
-    create: {
-      email: "seller@test.com",
-      password: hashedPassword,
-      nickname: "테스트 판매자",
-      phone: "010-1111-1111",
-      role: UserRole.SELLER,
-      pointBalance: 100000,
-    },
-  });
-
-  console.log("✅ SELLER 사용자 생성:", seller.email);
-
-  // ADMIN
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@test.com" },
-    update: {},
-    create: {
-      email: "admin@test.com",
-      password: hashedPassword,
-      nickname: "테스트 관리자",
-      phone: "010-2222-2222",
-      role: UserRole.ADMIN,
-      pointBalance: 0,
-    },
-  });
-
-  console.log("✅ ADMIN 사용자 생성:", admin.email);
-
-  // CUSTOMER
-  const customer = await prisma.user.upsert({
-    where: { email: "customer@test.com" },
-    update: {},
-    create: {
-      email: "customer@test.com",
-      password: hashedPassword,
-      nickname: "테스트 고객",
-      phone: "010-3333-3333",
-      role: UserRole.CUSTOMER,
-      pointBalance: 50000,
-    },
-  });
-
-  console.log("✅ CUSTOMER 사용자 생성:", customer.email);
-
-  // SELLER 2, 3 (센터 종류 다양화용)
-  const seller2 = await prisma.user.upsert({
-    where: { email: "seller2@test.com" },
-    update: {},
-    create: {
-      email: "seller2@test.com",
-      password: hashedPassword,
-      nickname: "요가 스튜디오 판매자",
-      phone: "010-1111-1112",
-      role: UserRole.SELLER,
-      pointBalance: 0,
-    },
-  });
-  const seller3 = await prisma.user.upsert({
-    where: { email: "seller3@test.com" },
-    update: {},
-    create: {
-      email: "seller3@test.com",
-      password: hashedPassword,
-      nickname: "필라테스 센터 판매자",
-      phone: "010-1111-1113",
-      role: UserRole.SELLER,
-      pointBalance: 0,
-    },
-  });
-  console.log("✅ SELLER 2, 3 생성 (센터 다양화용)");
-
-  // 추가 CUSTOMER 5명 생성
-  const customers = [customer];
-  for (let i = 1; i <= 5; i++) {
-    const newCustomer = await prisma.user.upsert({
-      where: { email: `customer${i}@test.com` },
-      update: {},
-      create: {
-        email: `customer${i}@test.com`,
-        password: hashedPassword,
-        nickname: `고객 ${i}`,
-        phone: `010-4444-444${i}`,
-        role: UserRole.CUSTOMER,
-        pointBalance: Math.floor(Math.random() * 100000),
-      },
-    });
-    customers.push(newCustomer);
-    console.log(`✅ 추가 CUSTOMER 생성: customer${i}@test.com`);
-  }
-
-  // 2. 센터 생성 (종류별: 피트니스 / 요가 스튜디오 / 필라테스)
-  const center1 = await prisma.center.upsert({
-    where: { ownerId: seller.id },
-    update: {},
-    create: {
-      ownerId: seller.id,
-      name: "피트니스 센터 강남점",
-      address1: "서울시 강남구 테헤란로 123",
-      address2: "3층",
-      introduction:
-        "최신 시설과 전문 트레이너가 있는 프리미엄 피트니스 센터입니다.",
-      businessHours: {
-        월요일: "06:00 - 22:00",
-        화요일: "06:00 - 22:00",
-        수요일: "06:00 - 22:00",
-        목요일: "06:00 - 22:00",
-        금요일: "06:00 - 22:00",
-        토요일: "08:00 - 20:00",
-        일요일: "10:00 - 18:00",
-      },
-      lat: 37.4979,
-      lng: 127.0276,
-    },
-  });
-  const center2 = await prisma.center.upsert({
-    where: { ownerId: seller2.id },
-    update: {},
-    create: {
-      ownerId: seller2.id,
-      name: "힐링 요가 스튜디오",
-      address1: "서울시 서초구 서초대로 456",
-      address2: "2층",
-      introduction: "요가 전용 스튜디오. 힐링·명상·아사나 등 다양한 수업.",
-      businessHours: {
-        월요일: "07:00 - 21:00",
-        화요일: "07:00 - 21:00",
-        수요일: "07:00 - 21:00",
-        목요일: "07:00 - 21:00",
-        금요일: "07:00 - 21:00",
-        토요일: "09:00 - 18:00",
-        일요일: "휴무",
-      },
-      lat: 37.4833,
-      lng: 127.0323,
-    },
-  });
-  const center3 = await prisma.center.upsert({
-    where: { ownerId: seller3.id },
-    update: {},
-    create: {
-      ownerId: seller3.id,
-      name: "코어 필라테스",
-      address1: "서울시 송파구 올림픽로 789",
-      address2: "1층",
-      introduction:
-        "매트·리포머 전문. 재활과 코어 강화에 특화된 필라테스 센터.",
-      businessHours: {
-        월요일: "08:00 - 22:00",
-        화요일: "08:00 - 22:00",
-        수요일: "08:00 - 22:00",
-        목요일: "08:00 - 22:00",
-        금요일: "08:00 - 22:00",
-        토요일: "10:00 - 16:00",
-        일요일: "10:00 - 16:00",
-      },
-      lat: 37.5145,
-      lng: 127.106,
-    },
-  });
-  const centers = [center1, center2, center3];
-  console.log("✅ 센터 3종 생성:", centers.map((c) => c.name).join(", "));
-
-  // 3. 클래스 및 슬롯, 예약 생성 (센터별·종류 다양: 카테고리/레벨/상태)
-  const classData: Array<{
-    centerIndex: number;
-    title: string;
-    category: string;
-    level: string;
-    desc: string;
-    notice?: string;
-    price: number;
-    capacity: number;
-    times: number[];
-    status: ClassStatus;
-    rejectReason?: string;
-    schedule?: Record<string, string>;
-    slotDaysCount: number; // 슬롯 생성할 일수 (갯수 제한용)
-  }> = [
-    {
-      centerIndex: 0,
-      title: "아침 요가",
-      category: "요가",
-      level: "초급",
-      desc: "상쾌한 아침을 여는 요가",
-      notice: "요가 매트 지참 또는 대여 가능.",
-      price: 15000,
-      capacity: 99,
-      times: [7, 8, 9],
-      status: ClassStatus.PENDING,
-      slotDaysCount: 22,
-    },
-    {
-      centerIndex: 0,
-      title: "1:1 PT",
-      category: "헬스",
-      level: "고급",
-      desc: "전문가와 함께하는 맞춤형 트레이닝",
-      price: 50000,
-      capacity: 99,
-      times: [13, 14, 15],
-      status: ClassStatus.PENDING,
-      slotDaysCount: 22,
-    },
-    {
-      centerIndex: 0,
-      title: "저녁 필라테스",
-      category: "필라테스",
-      level: "중급",
-      desc: "퇴근 후 힐링 필라테스",
-      price: 20000,
-      capacity: 99,
-      times: [19, 20, 21],
-      status: ClassStatus.PENDING,
-      slotDaysCount: 22,
-    },
-    {
-      centerIndex: 1,
-      title: "힐링 요가",
-      category: "요가",
-      level: "입문",
-      desc: "스트레칭과 호흡 중심의 힐링 요가",
-      notice: "편한 복장으로 참여해 주세요.",
-      price: 12000,
-      capacity: 99,
-      times: [10, 19],
-      status: ClassStatus.APPROVED,
-      schedule: { 월수금: "10:00, 19:00", 화목: "19:00" },
-      slotDaysCount: 7,
-    },
-    {
-      centerIndex: 1,
-      title: "아사나 요가",
-      category: "요가",
-      level: "중급",
-      desc: "자세 정렬과 근력·유연성 강화",
-      price: 18000,
-      capacity: 99,
-      times: [9, 18],
-      status: ClassStatus.APPROVED,
-      slotDaysCount: 7,
-    },
-    {
-      centerIndex: 1,
-      title: "명상 요가",
-      category: "요가",
-      level: "입문",
-      desc: "명상과 가벼운 동작으로 마음 챙기기",
-      price: 10000,
-      capacity: 99,
-      times: [20],
-      status: ClassStatus.APPROVED,
-      slotDaysCount: 0,
-    },
-    {
-      centerIndex: 2,
-      title: "매트 필라테스",
-      category: "필라테스",
-      level: "초급",
-      desc: "매트 위에서 하는 기초 필라테스",
-      notice: "수건 지참 권장.",
-      price: 15000,
-      capacity: 99,
-      times: [11, 14, 20],
-      status: ClassStatus.APPROVED,
-      slotDaysCount: 7,
-    },
-    {
-      centerIndex: 2,
-      title: "리포머 필라테스",
-      category: "필라테스",
-      level: "중급",
-      desc: "리포머 기구를 활용한 필라테스",
-      price: 25000,
-      capacity: 99,
-      times: [10, 15],
-      status: ClassStatus.REJECTED,
-      rejectReason: "기구 안전 점검 후 재신청 부탁드립니다.",
-      slotDaysCount: 0,
-    },
+  // 1. 기존 데이터 정리
+  const tables = [
+    "point_history",
+    "reviews",
+    "reservations",
+    "user_coupons",
+    "notifications",
+    "class_slots",
+    "classes",
+    "coupon_templates",
+    "centers",
+    "users",
   ];
 
-  const now = new Date();
+  for (const table of tables) {
+    try {
+      // PostgreSQL 전용 TRUNCATE (속도 및 완전 삭제 보장)
+      await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE;`);
+    } catch (e) {
+      console.log(`⚠️ ${table} 초기화 건너뜀 또는 실패 (테이블이 없거나 비어 있음)`);
+    }
+  }
+  console.log("🧹 기존 데이터 삭제 완료\n");
 
-  // 날짜 유틸 함수
-  const addDays = (date: Date, days: number) => {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
-  };
+  const password = await bcrypt.hash("test1234", 10);
 
-  // userId + slotStartAt 전역 추적 (모든 클래스·슬롯에 걸쳐 동일 시간대 중복 예약 방지)
-  const usedUserSlot = new Set<string>();
+  // 2. 유저 생성 (관리자, 판매자, 고객)
+  const adminId = createCuid();
+  await prisma.user.create({
+    data: {
+      id: adminId,
+      email: "admin@test.com",
+      password,
+      nickname: "관리자",
+      role: UserRole.ADMIN,
+      phone: "010-0000-0000",
+    }
+  });
 
-  for (const cData of classData) {
-    const centerId = centers[cData.centerIndex].id;
-    const cls = await prisma.class.create({
+  const sellers = [];
+  for (let i = 1; i <= 3; i++) {
+    const id = createCuid();
+    const user = await prisma.user.create({
       data: {
-        centerId,
-        title: cData.title,
-        category: cData.category,
-        level: cData.level,
-        description: cData.desc,
-        notice: cData.notice ?? undefined,
-        pricePoints: cData.price,
-        capacity: cData.capacity,
-        status: cData.status,
-        rejectReason: cData.rejectReason ?? undefined,
-        schedule: cData.schedule ?? undefined,
-        imgUrls: [],
-      },
+        id,
+        email: `seller${i}@test.com`,
+        password,
+        nickname: `판매자${i}`,
+        role: UserRole.SELLER,
+        phone: `010-1000-000${i}`,
+      }
     });
-    console.log(
-      `✅ 클래스 생성: ${cls.title} [${cData.category}/${cData.level}] (${cData.status})`
-    );
+    sellers.push(user);
+  }
 
-    // APPROVED 클래스만 슬롯 생성, slotDaysCount만큼만 (갯수 제한)
-    if (cData.status !== ClassStatus.APPROVED || cData.slotDaysCount <= 0)
-      continue;
+  const customers = [];
+  for (let i = 1; i <= 10; i++) {
+    const id = createCuid();
+    const initialPoints = i <= 8 ? 500000 : 0; // 8명은 부자, 2명은 빈털터리
+    const user = await prisma.user.create({
+      data: {
+        id,
+        email: `customer${i}@test.com`,
+        password,
+        nickname: `고객${i}`,
+        role: UserRole.CUSTOMER,
+        phone: `010-2000-00${i.toString().padStart(2, '0')}`,
+        pointBalance: initialPoints, 
+      }
+    });
 
-    const dayFrom = cData.slotDaysCount >= 22 ? -7 : 0;
-    const dayTo = cData.slotDaysCount >= 22 ? 14 : cData.slotDaysCount - 1;
+    if (initialPoints > 0) {
+      await prisma.pointHistory.create({
+        data: {
+          id: createCuid(),
+          userId: id,
+          type: PointUsed.CHARGE,
+          amount: initialPoints,
+          balanceBefore: 0,
+          balanceAfter: initialPoints,
+          memo: "초기 가입 축하금",
+        }
+      });
+    }
+    customers.push(user);
+  }
+  console.log(`✅ 유저 생성 완료: 관리자 1명, 판매자 ${sellers.length}명, 고객 ${customers.length}명`);
 
-    for (let d = dayFrom; d <= dayTo; d++) {
-      const targetDate = addDays(now, d);
+  // 3. 센터 생성 (판매자 당 1개)
+  const centers = [];
+  const categories = ["헬스", "요가", "필라테스", "크로스핏"];
+  
+  for (const seller of sellers) {
+    const id = createCuid();
+    const center = await prisma.center.create({
+      data: {
+        id,
+        ownerId: seller.id,
+        name: `${seller.nickname}의 피트니스`,
+        address1: "서울시 강남구 테헤란로 123",
+        address2: "2층",
+        introduction: "최고의 시설과 강사진을 자랑합니다.",
+        lat: 37.4979,
+        lng: 127.0276,
+        businessHours: {
+          mon: "09:00-22:00",
+          tue: "09:00-22:00",
+          wed: "09:00-22:00",
+          thu: "09:00-22:00",
+          fri: "09:00-22:00",
+          sat: "10:00-18:00",
+          sun: null
+        }
+      }
+    });
+    centers.push(center);
+  }
+  console.log(`✅ 센터 ${centers.length}개 생성 완료`);
 
-      for (const hour of cData.times) {
-        const startAt = new Date(targetDate);
-        startAt.setHours(hour, 0, 0, 0);
-        const endAt = new Date(startAt);
-        endAt.setHours(hour + 1, 0, 0, 0);
+  // 4. 쿠폰 템플릿 생성
+  // 글로벌 쿠폰
+  const globalCoupon = await prisma.couponTemplate.create({
+    data: {
+      id: createCuid(),
+      name: "신규 가입 환영 쿠폰",
+      discountPoints: 5000,
+      issuerId: adminId,
+    }
+  });
 
-        const slot = await prisma.classSlot.create({
-          data: {
-            classId: cls.id,
-            startAt,
-            endAt,
-            capacity: cData.capacity,
-            isOpen: true,
-          },
-        });
+  // 센터 전용 쿠폰
+  const centerCoupons = [];
+  for (const center of centers) {
+    const tpl = await prisma.couponTemplate.create({
+      data: {
+        id: createCuid(),
+        centerId: center.id,
+        name: `${center.name} 10% 할인`,
+        discountPercentage: 10,
+        issuerId: center.ownerId,
+      }
+    });
+    centerCoupons.push(tpl);
+  }
 
-        const slotKey = startAt.getTime();
-        const availableCustomers = customers.filter(
-          (c) => !usedUserSlot.has(`${c.id}|${slotKey}`)
-        );
-        const reservationCount = Math.min(
-          Math.floor(Math.random() * 4),
-          availableCustomers.length
-        );
-        const shuffledCustomers = [...availableCustomers].sort(
-          () => 0.5 - Math.random()
-        );
-        const selectedCustomers = shuffledCustomers.slice(0, reservationCount);
+  // 고객에게 쿠폰 발급
+  for (const customer of customers) {
+    // 모든 고객에게 글로벌 쿠폰 지급
+    await prisma.userCoupon.create({
+      data: {
+        id: createCuid(),
+        userId: customer.id,
+        templateId: globalCoupon.id,
+        issuedAt: new Date(),
+        couponName: globalCoupon.name,
+        discountPoints: globalCoupon.discountPoints,
+        discountPercentage: globalCoupon.discountPercentage,
+        expiresAt: globalCoupon.expiresAt,
+      }
+    });
+    // 일부 고객에게 센터 전용 쿠폰 랜덤 지급
+    if (Math.random() > 0.5) {
+      const selectedTemplate = randomItem(centerCoupons);
+      await prisma.userCoupon.create({
+        data: {
+          id: createCuid(),
+          userId: customer.id,
+          templateId: selectedTemplate.id,
+          issuedAt: new Date(),
+          couponName: selectedTemplate.name,
+          discountPoints: selectedTemplate.discountPoints,
+          discountPercentage: selectedTemplate.discountPercentage,
+          expiresAt: selectedTemplate.expiresAt,
+        }
+      });
+    }
+  }
+  console.log("✅ 쿠폰 템플릿 생성 및 발급 완료");
 
-        for (const cust of selectedCustomers) {
-          usedUserSlot.add(`${cust.id}|${slotKey}`);
-          let status: ReservationStatus = ReservationStatus.BOOKED;
-          const isPast = startAt < now;
+  // 5. 클래스 및 슬롯 생성
+  const classes = [];
+  const now = new Date();
+  
+  for (const center of centers) {
+    const classCount = 4;
+    for (let k = 0; k < classCount; k++) {
+      const status = k === 0 ? ClassStatus.PENDING : (k === 1 ? ClassStatus.REJECTED : ClassStatus.APPROVED);
+      const price = randomItem([10000, 20000, 30000, 50000]);
+      
+      const newClass = await prisma.class.create({
+        data: {
+          id: createCuid(),
+          centerId: center.id,
+          title: `${categories[k % categories.length]} 클래스 ${k+1}`,
+          category: categories[k % categories.length],
+          level: randomItem(["입문", "초급", "중급", "고급"]),
+          pricePoints: price,
+          capacity: 10,
+          status: status,
+          description: "함께 땀 흘리며 건강해지는 시간입니다.",
+          rejectReason: status === ClassStatus.REJECTED ? "사진 해상도가 너무 낮습니다." : null,
+          imgUrls: [],
+        }
+      });
+      classes.push(newClass);
 
-          if (isPast) {
-            status =
-              Math.random() > 0.2
-                ? ReservationStatus.COMPLETED
-                : ReservationStatus.CANCELED;
-          } else {
-            status =
-              Math.random() > 0.1
-                ? ReservationStatus.BOOKED
-                : ReservationStatus.CANCELED;
+      // 승인된 클래스에 대해 슬롯 생성 (지난 7일 ~ 향후 14일)
+      if (status === ClassStatus.APPROVED) {
+        for (let d = -7; d <= 14; d++) {
+          const date = new Date(now);
+          date.setDate(date.getDate() + d);
+          
+          // 하루 2타임 생성: 10:00, 19:00
+          const times = [10, 19];
+          for (const hour of times) {
+            const startAt = new Date(date);
+            startAt.setHours(hour, 0, 0, 0);
+            const endAt = new Date(startAt);
+            endAt.setHours(hour + 1, 0, 0, 0);
+
+            await prisma.classSlot.create({
+              data: {
+                id: createCuid(),
+                classId: newClass.id,
+                startAt,
+                endAt,
+                capacity: 10,
+                isOpen: true,
+                currentReservation: 0 
+              }
+            });
           }
-
-          const completedAt =
-            status === ReservationStatus.COMPLETED ? endAt : null;
-          const canceledAt =
-            status === ReservationStatus.CANCELED ? new Date() : null;
-
-          await prisma.reservation.create({
-            data: {
-              userId: cust.id,
-              classId: cls.id,
-              slotId: slot.id,
-              status,
-              slotStartAt: startAt,
-              pricePoints: cls.pricePoints,
-              paidPoints: cls.pricePoints,
-              completedAt,
-              canceledAt,
-            },
-          });
         }
       }
     }
   }
+  console.log(`✅ 클래스 및 슬롯 생성 완료`);
 
-  // JWT 토큰 생성
-  const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-  const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+  // 6. 예약 생성
+  const allSlots = await prisma.classSlot.findMany({
+    include: { class: true }
+  });
+  
+  let reservationCount = 0;
 
-  const signOptions: SignOptions = {
-    expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"],
-  };
+  for (const customer of customers) {
+    if (customer.pointBalance <= 0) continue; // 포인트 없는 고객 제외
 
-  const sellerToken = jwt.sign(
-    { id: seller.id, email: seller.email, role: seller.role },
-    JWT_SECRET,
-    signOptions
-  );
+    // 랜덤하게 섞은 뒤 순회하며 시간대 중복 체크하여 3-5개 선택
+    const shuffledSlots = allSlots.sort(() => 0.5 - Math.random());
+    const targetSlots: typeof allSlots = [];
+    const bookedTimes = new Set<number>();
+    const maxReservations = randomInt(3, 5);
 
-  const adminToken = jwt.sign(
-    { id: admin.id, email: admin.email, role: admin.role },
-    JWT_SECRET,
-    signOptions
-  );
+    for (const slot of shuffledSlots) {
+      if (targetSlots.length >= maxReservations) break;
+      
+      const timeKey = slot.startAt.getTime();
+      if (bookedTimes.has(timeKey)) continue; // 이미 해당 시간대에 예약함
 
-  const customerToken = jwt.sign(
-    { id: customer.id, email: customer.email, role: customer.role },
-    JWT_SECRET,
-    signOptions
-  );
+      bookedTimes.add(timeKey);
+      targetSlots.push(slot);
+    }
 
+    for (const slot of targetSlots) {
+      // 로직: 포인트 확인 -> 차감 -> 슬롯 업데이트 -> 예약 생성 -> 내역 기록
+      
+      // 가격 계산
+      const price = slot.class.pricePoints;
+      
+      // 쿠폰 사용 (랜덤)
+      let discount = 0;
+      let usedUserCouponId = null;
+      
+      // 사용하지 않은 쿠폰 조회
+      const myCoupon = await prisma.userCoupon.findFirst({
+        where: { userId: customer.id, usedAt: null },
+        include: { template: true }
+      });
+
+      if (myCoupon && Math.random() > 0.5) {
+        // 적용 가능 여부 단순 체크 (글로벌이거나 센터 ID 일치)
+        const centerId = myCoupon.template?.centerId; 
+        const isGlobal = !centerId;
+        const isMatch = centerId === slot.class.centerId;
+        
+        if (isGlobal || isMatch) {
+          if (myCoupon.discountPoints) {
+            discount = myCoupon.discountPoints;
+          } else if (myCoupon.discountPercentage) {
+            discount = Math.floor(price * myCoupon.discountPercentage / 100);
+          }
+          usedUserCouponId = myCoupon.id;
+        }
+      }
+
+      const payAmount = Math.max(0, price - discount);
+
+      // 잔액 확인 (시드 데이터라 대략적으로 처리하지만 안전하게 다시 조회)
+      const freshUser = await prisma.user.findUnique({ where: { id: customer.id }});
+      if (!freshUser || freshUser.pointBalance < payAmount) continue;
+
+      // 시간 기준 상태 결정
+      let rStatus: ReservationStatus = ReservationStatus.BOOKED;
+      if (slot.startAt < now) {
+        rStatus = ReservationStatus.COMPLETED; // 지난 슬롯은 완료 처리
+      }
+
+      // 1. 예약 생성
+      const reservationId = createCuid();
+      await prisma.reservation.create({
+        data: {
+          id: reservationId,
+          userId: customer.id,
+          classId: slot.classId,
+          slotId: slot.id,
+          status: rStatus,
+          slotStartAt: slot.startAt,
+          pricePoints: price,
+          couponDiscountPoints: discount,
+          paidPoints: payAmount,
+          userCouponId: usedUserCouponId,
+          completedAt: rStatus === ReservationStatus.COMPLETED ? slot.endAt : null,
+        }
+      });
+
+      // 2. 쿠폰 사용 처리
+      if (usedUserCouponId) {
+        await prisma.userCoupon.update({
+          where: { id: usedUserCouponId },
+          data: { usedAt: new Date() }
+        });
+      }
+
+      // 3. 포인트 차감 및 내역 기록
+      await prisma.user.update({
+        where: { id: customer.id },
+        data: { pointBalance: { decrement: payAmount } }
+      });
+
+      await prisma.pointHistory.create({
+        data: {
+          id: createCuid(),
+          userId: customer.id,
+          type: PointUsed.USE,
+          amount: payAmount,
+          balanceBefore: freshUser.pointBalance,
+          balanceAfter: freshUser.pointBalance - payAmount,
+          reservationId: reservationId,
+        }
+      });
+
+      // 4. 슬롯 예약 수 업데이트
+      await prisma.classSlot.update({
+        where: { id: slot.id },
+        data: { currentReservation: { increment: 1 } }
+      });
+      
+      reservationCount++;
+
+      // 5. 리뷰 생성 (완료된 예약인 경우)
+      if (rStatus === ReservationStatus.COMPLETED && Math.random() > 0.3) {
+        await prisma.review.create({
+          data: {
+             id: createCuid(),
+             reservationId: reservationId,
+             userId: customer.id,
+             classId: slot.classId,
+             rating: randomInt(3, 5),
+             content: randomItem(["너무 좋았어요!", "힘들지만 보람찹니다.", "시설이 깨끗해요.", "강사님이 친절해요."]), 
+          }
+        });
+      }
+    }
+  }
+
+  console.log(`✅ 예약 ${reservationCount}건 생성 완료 (포인트/쿠폰 연동 포함)`);
   console.log("\n✨ 시드 데이터 생성 완료!");
-  console.log("\n📝 테스트 계정:");
-  console.log("   SELLER: seller@test.com / test1234 (강남 피트니스)");
-  console.log("   SELLER: seller2@test.com / test1234 (요가 스튜디오)");
-  console.log("   SELLER: seller3@test.com / test1234 (필라테스)");
-  console.log("   ADMIN:  admin@test.com / test1234");
-  console.log("   CUSTOMER: customer@test.com / test1234");
-  console.log("   (추가) CUSTOMER 1~5: customer[N]@test.com / test1234");
-
-  console.log("\n🔑 테스트용 JWT 토큰 ");
-  console.log("\nSELLER_TOKEN:");
-  console.log(sellerToken);
-  console.log("\nADMIN_TOKEN:");
-  console.log(adminToken);
-  console.log("\nCUSTOMER_TOKEN:");
-  console.log(customerToken);
+  console.log("   관리자: admin@test.com / test1234");
+  console.log("   판매자: seller1@test.com / test1234");
+  console.log("   고객: customer1@test.com / test1234");
 }
 
 main()
@@ -482,3 +426,5 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+

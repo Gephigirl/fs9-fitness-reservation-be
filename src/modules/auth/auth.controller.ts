@@ -1,13 +1,18 @@
-// TODO: AuthController 구현
-
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import * as authService from './auth.service.ts';
-import * as centerService from '../center/center.service.ts';
 import { env } from '../../config/env.ts';
+import { AppError } from '../../middlewares/errorHandler.ts';
 
 const ACCESS_COOKIE_NAME = 'accessToken';
 const REFRESH_COOKIE_NAME = 'refreshToken';
+
+// 프로필 이미지 URL 생성 헬퍼
+function getProfileImageUrl(req: Request) {
+  if (!req.file) return undefined;
+  const baseUrl = `${env.SERVER_URL}/uploads/profiles`;
+  return `${baseUrl}/${req.file.filename}`;
+}
 
 function getCookieOptions(kind: 'access' | 'refresh') {
 
@@ -40,15 +45,18 @@ function clearAuthCookies(res: Response) {
 export async function signupHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const { center: centerData, ...userData } = req.body;
+    
+    // 프로필 이미지 처리
+    const profileImgUrl = getProfileImageUrl(req);
+    if (profileImgUrl) {
+      userData.profileImgUrl = profileImgUrl;
+    }
+
     const user = await authService.createUser(userData);
 
-    let center = null;
-    if (userData.role === 'SELLER' && centerData) {
-      center = await centerService.createCenter(user.id, centerData);
-    }
     res.status(201).json({
       success: true,
-      data: { ...user, center },
+      data: { ...user },
     });
   } catch (error) {
     next(error);
@@ -117,10 +125,37 @@ export async function getUserByIdHandler(req: Request, res: Response, next: Next
   }
 }
 
-export async function updateUserHandler(req: Request, res: Response, next: NextFunction) {
+export async function updateCustomerHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const id = (req.params.id || (req as any).user?.id) as string;
-    const user = await authService.updateUser(id, req.body as any);
+    
+    const updateData = { ...req.body };
+    const profileImgUrl = getProfileImageUrl(req);
+    if (profileImgUrl) {
+      updateData.profileImgUrl = profileImgUrl;
+    }
+
+    const user = await authService.updateCustomerProfile(id, updateData, profileImgUrl);
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateSellerHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = (req.params.id || (req as any).user?.id) as string;
+
+    const updateData = { ...req.body };
+    const profileImgUrl = getProfileImageUrl(req);
+    if (profileImgUrl) {
+      updateData.profileImgUrl = profileImgUrl;
+    }
+
+    const user = await authService.updateSellerProfile(id, updateData, profileImgUrl);
     res.status(200).json({
       success: true,
       data: user,
@@ -136,5 +171,6 @@ export default {
   refreshHandler,
   logoutHandler,
   getUserByIdHandler,
-  updateUserHandler,
+  updateCustomerHandler,
+  updateSellerHandler,
 };

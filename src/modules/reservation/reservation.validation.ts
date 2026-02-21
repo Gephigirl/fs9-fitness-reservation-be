@@ -21,8 +21,8 @@ export const cancelReservationSchema = z.object({
 
 // 예약 조회
 const queryReservationQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+  page: z.preprocess((val) => Number(val), z.number().int().min(1)).optional().default(1),
+  limit: z.preprocess((val) => Number(val), z.number().int().min(1).max(100)).optional().default(10),
   userId: z.cuid().optional(),
   classId: z.cuid().optional(),
   slotId: z.cuid().optional(),

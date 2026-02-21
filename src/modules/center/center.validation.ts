@@ -29,6 +29,7 @@ export const updateCenterSchema = z.object({
 export const queryCenterSchema = z.object({
   query: z.object({
     name: z.string().optional(),
+    sort: z.enum(["latest", "name"]).optional().default("latest"),
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(10),
   }),

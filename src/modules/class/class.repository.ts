@@ -18,11 +18,15 @@ export async function createClass(data: Prisma.ClassCreateInput) {
 
 export async function findManyClasses(params: {
   where: Prisma.ClassWhereInput;
+  orderBy?: Prisma.ClassOrderByWithRelationInput | Prisma.ClassOrderByWithRelationInput[];
   skip: number;
   take: number;
 }) {
   return prisma.class.findMany({
-    where: params.where,
+    where: {
+      ...params.where,
+      deletedAt: null,
+    },
     skip: params.skip,
     take: params.take,
     include: {
@@ -31,6 +35,11 @@ export async function findManyClasses(params: {
           id: true,
           name: true,
           address1: true,
+        },
+      },
+      reviews: {
+        select: {
+          rating: true,
         },
       },
       _count: {
@@ -44,25 +53,34 @@ export async function findManyClasses(params: {
         },
       },
     },
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: params.orderBy || { createdAt: "desc" },
   });
 }
 
 // 상태별 클래스 개수 카운트
 export async function countClassesByStatus(status?: ClassStatus) {
-  const where: Prisma.ClassWhereInput = status ? { status } : {};
+  const where: Prisma.ClassWhereInput = {
+    ...(status ? { status } : {}),
+    deletedAt: null,
+  };
   return prisma.class.count({ where });
 }
 
 export async function countClasses(where: Prisma.ClassWhereInput) {
-  return prisma.class.count({ where });
+  return prisma.class.count({
+    where: {
+      ...where,
+      deletedAt: null,
+    },
+  });
 }
 
 export async function findClassById(classId: string, now: Date = new Date()) {
-  return prisma.class.findUnique({
-    where: { id: classId },
+  return prisma.class.findFirst({
+    where: {
+      id: classId,
+      deletedAt: null,
+    },
     include: {
       center: {
         select: {
@@ -81,6 +99,7 @@ export async function findClassById(classId: string, now: Date = new Date()) {
           startAt: {
             gte: now,
           },
+          deletedAt: null,
         },
         orderBy: {
           startAt: "asc",
@@ -122,8 +141,11 @@ export async function findClassById(classId: string, now: Date = new Date()) {
 }
 
 export async function findClassWithCenter(classId: string) {
-  return prisma.class.findUnique({
-    where: { id: classId },
+  return prisma.class.findFirst({
+    where: {
+      id: classId,
+      deletedAt: null,
+    },
     include: {
       center: true,
     },
@@ -131,8 +153,11 @@ export async function findClassWithCenter(classId: string) {
 }
 
 export async function findClassWithReservationCount(classId: string) {
-  return prisma.class.findUnique({
-    where: { id: classId },
+  return prisma.class.findFirst({
+    where: {
+      id: classId,
+      deletedAt: null,
+    },
     include: {
       center: true,
       _count: {
@@ -164,14 +189,20 @@ export async function updateClass(
 }
 
 export async function deleteClass(classId: string) {
-  return prisma.class.delete({
+  return prisma.class.update({
     where: { id: classId },
+    data: {
+      deletedAt: new Date(),
+    },
   });
 }
 
 export async function findClassSimple(classId: string) {
-  return prisma.class.findUnique({
-    where: { id: classId },
+  return prisma.class.findFirst({
+    where: {
+      id: classId,
+      deletedAt: null,
+    },
   });
 }
 
@@ -203,8 +234,11 @@ export async function updateClassStatus(
 }
 
 export async function findClassWithCenterForSlot(classId: string) {
-  return prisma.class.findUnique({
-    where: { id: classId },
+  return prisma.class.findFirst({
+    where: {
+      id: classId,
+      deletedAt: null,
+    },
     include: {
       center: true,
     },
@@ -220,6 +254,7 @@ export async function findOverlappingSlot(
       classId,
       startAt: { lt: endAt },
       endAt: { gt: startAt },
+      deletedAt: null,
     },
   });
 }
@@ -230,8 +265,11 @@ export async function createSlot(data: Prisma.ClassSlotUncheckedCreateInput) {
 }
 
 export async function findSlotWithClassAndReservations(slotId: string) {
-  return prisma.classSlot.findUnique({
-    where: { id: slotId },
+  return prisma.classSlot.findFirst({
+    where: {
+      id: slotId,
+      deletedAt: null,
+    },
     include: {
       class: {
         include: {
@@ -262,8 +300,11 @@ export async function updateSlot(
 }
 
 export async function findSlotForDelete(slotId: string) {
-  return prisma.classSlot.findUnique({
-    where: { id: slotId },
+  return prisma.classSlot.findFirst({
+    where: {
+      id: slotId,
+      deletedAt: null,
+    },
     include: {
       class: {
         include: {
@@ -286,12 +327,27 @@ export async function findSlotForDelete(slotId: string) {
 }
 
 export async function deleteSlot(slotId: string) {
-  return prisma.classSlot.delete({
+  return prisma.classSlot.update({
     where: { id: slotId },
+    data: {
+      deletedAt: new Date(),
+    },
   });
 }
 
-// 클래스의 모든 예약 취소
+export async function deleteSlotsByClassId(classId: string) {
+  return prisma.classSlot.updateMany({
+    where: {
+      classId,
+      deletedAt: null,
+    },
+    data: {
+      deletedAt: new Date(),
+    },
+  });
+}
+
+// 클래스의 모든 예약 취소 
 export async function cancelAllReservationsForClass(classId: string) {
   return prisma.reservation.updateMany({
     where: {
@@ -325,7 +381,10 @@ export async function updateAllSlotsCapacity(
   capacity: number,
 ) {
   return prisma.classSlot.updateMany({
-    where: { classId },
+    where: {
+      classId,
+      deletedAt: null,
+    },
     data: { capacity },
   });
 }
