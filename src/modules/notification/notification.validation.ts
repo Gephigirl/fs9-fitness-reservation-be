@@ -21,7 +21,6 @@ export const listNotificationsSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-    // ADMIN 전용: 특정 유저 알림 조회
     userId: z.string().min(1).optional(),
   }),
 });
@@ -32,19 +31,16 @@ export const notificationIdParamSchema = z.object({
   }),
 });
 
-export const updateNotificationSchema = z.object({
+/** PATCH /notifications/:id — 읽음 처리만 허용 */
+export const markReadSchema = z.object({
   params: z.object({
     id: z.string().min(1, "id는 필수입니다"),
   }),
-  body: z
-    .object({
-      title: z.string().min(1).max(100).optional(),
-      body: z.string().max(2000).optional(),
-      linkUrl: linkUrlSchema.optional(),
-    })
-    .refine((v) => Object.keys(v).length > 0, "수정할 필드가 필요합니다"),
+  body: z.object({
+    isRead: z.boolean({ required_error: "isRead는 필수입니다" }),
+  }),
 });
 
 export type CreateNotificationInput = z.infer<typeof createNotificationSchema>["body"];
 export type ListNotificationsQuery = z.infer<typeof listNotificationsSchema>["query"];
-export type UpdateNotificationInput = z.infer<typeof updateNotificationSchema>["body"];
+export type MarkReadInput = z.infer<typeof markReadSchema>["body"];

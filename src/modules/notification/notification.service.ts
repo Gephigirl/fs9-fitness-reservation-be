@@ -5,7 +5,7 @@ import { publishToUser } from "./notification.sse.ts";
 import type {
   CreateNotificationInput,
   ListNotificationsQuery,
-  UpdateNotificationInput,
+  MarkReadInput,
 } from "./notification.validation.ts";
 
 type AuthUser = {
@@ -13,7 +13,13 @@ type AuthUser = {
   role: UserRole;
 };
 
-export async function createNotification(input: CreateNotificationInput) {
+// ── 공통 헬퍼: 다른 서비스에서 호출 ──────────────────────────────────────
+export async function sendNotification(input: {
+  userId: string;
+  title: string;
+  body?: string;
+  linkUrl?: string;
+}) {
   const created = await notificationRepo.createNotification({
     userId: input.userId,
     title: input.title,
@@ -24,8 +30,16 @@ export async function createNotification(input: CreateNotificationInput) {
   return created;
 }
 
-export async function listNotifications(authUser: AuthUser, query: ListNotificationsQuery) {
-  // NOTE: 런타임에서 string으로 들어오는 케이스를 방어합니다.
+// ── 관리자 전용 수동 생성 ─────────────────────────────────────────────────
+export async function createNotification(input: CreateNotificationInput) {
+  return sendNotification(input);
+}
+
+// ── 알림 목록 (미읽음 + 30일 이내만 반환) ────────────────────────────────
+export async function listNotifications(
+  authUser: AuthUser,
+  query: ListNotificationsQuery,
+) {
   const page = Number((query as any).page ?? 1);
   const limit = Number((query as any).limit ?? 20);
   const safePage = Number.isFinite(page) && page >= 1 ? page : 1;
@@ -55,46 +69,46 @@ export async function listNotifications(authUser: AuthUser, query: ListNotificat
   };
 }
 
+// ── 알림 단건 조회 ─────────────────────────────────────────────────────────
 export async function getNotificationById(authUser: AuthUser, id: string) {
   const n = await notificationRepo.findNotificationById(id);
   if (!n) {
     throw new AppError(404, "알림을 찾을 수 없습니다", "NOT_FOUND");
   }
+  if (authUser.role !== "ADMIN" && n.userId !== authUser.id) {
+    throw new AppError(403, "권한이 없습니다", "FORBIDDEN");
+  }
+  return n;
+}
 
+// ── 읽음 처리 (본인 또는 ADMIN) ──────────────────────────────────────────
+export async function markNotificationRead(
+  authUser: AuthUser,
+  id: string,
+  input: MarkReadInput,
+) {
+  const n = await notificationRepo.findNotificationById(id);
+  if (!n) {
+    throw new AppError(404, "알림을 찾을 수 없습니다", "NOT_FOUND");
+  }
   if (authUser.role !== "ADMIN" && n.userId !== authUser.id) {
     throw new AppError(403, "권한이 없습니다", "FORBIDDEN");
   }
 
-  return n;
-}
+  const updated = input.isRead
+    ? await notificationRepo.markAsRead(id)
+    : n; // false 로 재요청 시 그대로 반환(언읽음 복원 필요 시 확장 가능)
 
-export async function updateNotificationById(
-  authUser: AuthUser,
-  id: string,
-  input: UpdateNotificationInput,
-) {
-  if (authUser.role !== "ADMIN") {
-    throw new AppError(403, "권한이 없습니다", "FORBIDDEN");
-  }
-
-  const before = await getNotificationById(authUser, id);
-
-  const updated = await notificationRepo.updateNotification(id, {
-    ...(input.title !== undefined && { title: input.title }),
-    ...(input.body !== undefined && { body: input.body }),
-    ...(input.linkUrl !== undefined && { linkUrl: input.linkUrl }),
-  });
-
-  publishToUser(before.userId, "notification.updated", updated);
+  publishToUser(n.userId, "notification.updated", updated);
   return updated;
 }
 
+// ── 알림 삭제 (본인 또는 ADMIN) ──────────────────────────────────────────
 export async function deleteNotificationById(authUser: AuthUser, id: string) {
   const n = await notificationRepo.findNotificationById(id);
   if (!n) {
     throw new AppError(404, "알림을 찾을 수 없습니다", "NOT_FOUND");
   }
-
   if (authUser.role !== "ADMIN" && n.userId !== authUser.id) {
     throw new AppError(403, "권한이 없습니다", "FORBIDDEN");
   }

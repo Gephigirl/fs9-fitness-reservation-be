@@ -11,8 +11,7 @@ import notificationRouter from "./modules/notification/notification.route.ts";
 import { logger } from "./middlewares/logger.ts";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.ts";
 import authRouter from "./modules/auth/auth.route.ts";
-
-const __fileimport pointRouter from "./modules/point/point.route.ts";
+import pointRouter from "./modules/point/point.route.ts";
 import reviewRouter from "./modules/review/review.route.ts";
 import userRouter from "./modules/user/user.route.ts";
 import couponRouter from "./modules/coupon/coupon.route.ts";
@@ -52,3 +51,7 @@ app.use("/api/reviews", reviewRouter);
 app.use("/api/users", userRouter);
 app.use("/api/coupons", couponRouter);
 app.use("/api/notifications", notificationRouter);
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+export default app;

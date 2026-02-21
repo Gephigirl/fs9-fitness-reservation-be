@@ -6,19 +6,19 @@ import {
   deleteNotificationHandler,
   getNotificationByIdHandler,
   listNotificationsHandler,
+  markReadHandler,
   streamNotificationsHandler,
-  updateNotificationHandler,
 } from "./notification.controller.ts";
 import {
   createNotificationSchema,
   listNotificationsSchema,
+  markReadSchema,
   notificationIdParamSchema,
-  updateNotificationSchema,
 } from "./notification.validation.ts";
 
 const router = Router();
 
-// POST /notifications - 알림 생성 (ADMIN)
+// POST /notifications — 관리자가 수동으로 알림 생성
 router.post(
   "/",
   authenticate,
@@ -27,11 +27,11 @@ router.post(
   createNotificationHandler,
 );
 
-// GET /notifications/stream - SSE 스트림 (로그인 필요)
-// NOTE: "/:id" 보다 먼저 선언해야 stream이 id로 잡히지 않습니다.
+// GET /notifications/stream — SSE (로그인 필요)
+// NOTE: "/:id" 보다 먼저 선언
 router.get("/stream", authenticate, streamNotificationsHandler);
 
-// GET /notifications - 내 알림 목록 (ADMIN은 userId query로 조회 가능)
+// GET /notifications — 내 미읽음 알림 목록 (30일 이내)
 router.get(
   "/",
   authenticate,
@@ -39,7 +39,7 @@ router.get(
   listNotificationsHandler,
 );
 
-// GET /notifications/:id - 알림 단건 조회
+// GET /notifications/:id — 단건 조회
 router.get(
   "/:id",
   authenticate,
@@ -47,16 +47,15 @@ router.get(
   getNotificationByIdHandler,
 );
 
-// PATCH /notifications/:id - 알림 수정 (ADMIN)
+// PATCH /notifications/:id — 읽음 처리 (본인 또는 ADMIN)
 router.patch(
   "/:id",
   authenticate,
-  requireRole("ADMIN"),
-  validate(updateNotificationSchema),
-  updateNotificationHandler,
+  validate(markReadSchema),
+  markReadHandler,
 );
 
-// DELETE /notifications/:id - 알림 삭제 (ADMIN 또는 본인)
+// DELETE /notifications/:id — 삭제 (본인 또는 ADMIN)
 router.delete(
   "/:id",
   authenticate,
